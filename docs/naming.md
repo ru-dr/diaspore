@@ -62,7 +62,7 @@ Module path: `github.com/ru-dr/diaspore`
 | `pappus.Read(path string)` | Load a run |
 | `type pappus.Profile struct` | Workload definition: expanded by capitulum, replayed by loadgen |
 | `type pappus.Trace struct` | The serialised event log the checker reads |
-| `check.Run(t pappus.Trace) []Violation` | Check a trace, with no runtime in scope |
+| `check.Run(p pappus.Pappus) []Violation` | Check a run: trace plus the config the checks need |
 | `dandelion.Sweep(seeds, workers int)` | Run the sweep |
 
 ## Command line

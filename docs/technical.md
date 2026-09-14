@@ -53,8 +53,8 @@ rebuilt from the manifest is not reproducible.
 
 ### 2.3 The portable unit
 
-A seed alone does not reproduce a run — cluster size, fault schedule, and
-protocol version all participate. These are serialised together with the
+A seed alone does not reproduce a run — cluster size, workload profile, fault
+schedule, and protocol version all participate. These are serialised together with the
 recorded event trace into a single file. Transferring that file to another
 machine reproduces the execution exactly.
 
@@ -145,6 +145,16 @@ Excluding them is a stated boundary of the fault model, not an omission.
   one client, one key, one floret, never going backwards.
 - After quiescence, no two florets hold different values for the same key.
 
+Both halves of the second invariant need a client that can name the floret
+answering a read, so a read carries its target: `ClientRead{Key, At FloretID}`.
+In quorum mode the addressed floret runs a majority read quorum, which is what
+makes a zero bound meaningful and violable. In primary-backup it answers from
+its own store, which is how a follower's staleness becomes measurable.
+
+That is also the honest form of the caching claim in section 7: a follower
+replica is a read cache with no coherence bound, and the project measures its
+staleness rather than asserting one.
+
 The third is convergence rather than ownership. With a static primary and no
 election, authority never moves, so no key can have two claimants; divergence
 through asynchronous fanout, a dropped replicate and a healed partition is the
@@ -168,7 +178,7 @@ finding is independently reproducible by a third party.
 | Consensus | Quorum acknowledgement rules and commit conditions |
 | Service API | HTTP key-value interface; CLI surface |
 | Load Testing & Threads | Client workload driver; sweep throughput scaling |
-| Caching | Follower replicas as a read cache; the staleness bound is its coherence condition |
+| Caching | Follower replicas as an unbounded read cache; staleness measured, not asserted |
 | Data | Versioned store, version vectors, conflict resolution |
 | Leaders, Followers, Time, Events | Primary and follower roles, logical clocks, event ordering |
 | Testing & Messaging | Invariant checking; replication message protocol |
@@ -223,9 +233,8 @@ behaviour and curve shape rather than absolute latency figures.
 The simulated half constitutes a complete result on its own.
 
 The cut order lives in [`plan.md`](plan.md) and nowhere else, so there is one
-list to keep true rather than three that drift. It runs `diaspore watch`, then
-real mode and axis 3, then quorum mode, then the delay and reorder faults, then
-version vectors — five items, each leaving a project that still stands.
+list to keep true rather than three that drift. Five items, each leaving a
+project that still stands.
 
 The determinism test, the portable run format, and the sweep are not reducible.
 They are the project.

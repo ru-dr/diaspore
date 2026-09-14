@@ -239,6 +239,11 @@ include. These are stated boundaries of the fault model, not omissions.
      by a follower has **no bound**, and none is claimed: follower staleness is measured and
      reported, not asserted. What is asserted for followers is **monotonic reads** — one
      client reading one key from one floret never sees the value go backwards.
+
+   Both halves depend on a client being able to say *which* floret answers, so a read carries
+   the floret it is addressed to: `ClientRead{Key, At FloretID}`. In quorum mode that floret
+   runs the read quorum; in primary-backup it answers from its own store. Reading a named
+   follower is how follower staleness becomes measurable at all.
 3. After quiescence — every message delivered or dropped, no client traffic in flight — no two
    florets hold different values for the same key.
 

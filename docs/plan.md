@@ -26,7 +26,10 @@ before it are the runway that gets you to the first of them.
 
 ## Week of 09/21
 
-- [ ] `core/event.go`, `core/message.go` — types only, no logic
+- [ ] `core/event.go`, `core/message.go` — types only, no logic. `ClientRead` carries the
+      floret it is addressed to; the wire messages are `Replicate`, `Ack`, `Read`,
+      `ReadReply`. The read pair exists now because the envelope freezes this week and the
+      quorum read path in 11/16 cannot add to it afterwards
 - [ ] `pappus/profile.go` — the workload profile type. It is needed before anything can
       generate a client request, and it belongs to the manifest
 - [ ] `core/floret.go` — the `Step(event) -> []Message` signature, stubbed
@@ -54,13 +57,20 @@ before it are the runway that gets you to the first of them.
 
 - [ ] `pappus/trace.go` — the `Trace` and `TraceRecord` types. They live here, not in
       `capitulum/`, so that `check/` never has to import a runtime
+- [ ] `pappus/encode.go` — canonical byte encoding of a `Trace`. The determinism test diffs
+      bytes, so the encoder has to exist now; `write.go` in 11/09 wraps this rather than
+      becoming a second one. A nondeterministic encoder would break replay silently, so it
+      comes under the test from its first day
 - [ ] `capitulum/trace.go` — the recorder: append to a `pappus.Trace`, keyed by virtual time
       and a sequence number. Not the logical clock: that is `core/clock.go` in 11/16, and the
       determinism test cannot wait for it
-- [ ] **`capitulum/determinism_test.go`** — same seed twice, byte-diff the traces
+- [ ] **`capitulum/determinism_test.go`** — same seed twice, byte-diff `pappus.EncodeTrace`
 - [ ] `.github/workflows/ci.yml` — build, vet, test, and the determinism test. The Floci infra
       job comes in 11/30, when the Terraform exists
 - [ ] `capitulum/faults.go` — first fault: crash
+- [ ] Time a 200-floret run under primary-backup, which is the only mode that exists yet.
+      That is the O(n) floor; the quadratic case is quorum, so re-time it the week quorum
+      lands and do not treat this number as the answer for both
 
 **Deliverable:** determinism proven and protected in CI. Do not let this slip past this week —
 every result downstream depends on it.
@@ -72,7 +82,8 @@ every result downstream depends on it.
 - [ ] `cmd/diaspore/main.go` — CLI skeleton and dispatch
 - [ ] `cmd/diaspore/run.go` — `diaspore run --seed`
 - [ ] `capitulum/faults.go` — add crash-restart and message drop
-- [ ] `real/api.go` — HTTP key-value endpoints
+- [ ] `real/api.go` — HTTP key-value endpoints, with a floret selector on reads so a client
+      can address a named follower. Without it there is no follower staleness to measure
 
 **Deliverable:** one command runs a seeded simulation with a crash in it, twice, identically.
 
@@ -133,7 +144,11 @@ Stated milestone: fault controller, logical clocks, both replication modes.
 
 - [ ] `core/clock.go` — logical clocks driven only by `Step`, and add the value as a field on
       the trace record. The trace stays ordered by virtual time; this is payload
-- [ ] `core/mode_quorum.go` — write commits only after majority ack
+- [ ] `core/mode_quorum.go` — write commits after majority ack, and the read path runs a
+      majority read quorum using `Read`/`ReadReply`. Both halves, or the zero staleness bound
+      invariant 2 asserts is not true
+- [ ] Re-time the 200-floret run now that quorum exists — this is the quadratic one the
+      10/05 measurement could not see
 - [ ] `core/mode_primary.go` — follower state and the acknowledgement path, finishing what
       09/28 stubbed. No heartbeats and no leases: a lease implies the primary can be
       reassigned, and there is no election in this design
@@ -149,8 +164,10 @@ Stated milestone: fault controller, logical clocks, both replication modes.
 Stated milestone: invariant checker, parallel sweep, first findings. This is the heart of the
 project.
 
-- [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `divergence.go` — reading a
-      `pappus.Trace` and nothing else. The third invariant is convergence after quiescence,
+- [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `divergence.go` — `check.Run`
+      takes a whole `pappus.Pappus`: `staleness.go` needs the mode to pick a bound and
+      `divergence.go` needs the membership to know who should agree, and both are config
+      rather than trace. The third invariant is convergence after quiescence,
       not ownership: with a static primary and no election, no key can ever have two
       claimants. `staleness.go` checks against the per-mode bound design.md states
 - [ ] `cmd/diaspore/verify.go`
@@ -231,7 +248,7 @@ same line, and nothing outside it should read as a promise.
 |---|---|---|
 | Determinism leakage | One unguarded clock read, map iteration or stray goroutine in `core/` breaks replay silently | Same-seed byte-diff test in CI from 10/05 onward. Load-bearing: if it fails, no other result can be trusted |
 | Benchmark noise on shared cloud hardware | Absolute EC2 timings are unreliable | Report relative behaviour and curve shape, not absolute latency |
-| 200-floret simulated runs may not finish in reasonable time | Message count grows with the square of cluster size in quorum mode | Check the 200-floret cost early, in the 10/05 week, on one seed. If it is too slow, say so in the proposal rather than discovering it in November |
+| 200-floret simulated runs may not finish in reasonable time | Message count grows with the square of cluster size in quorum mode | Two measurements, because one cannot cover both modes. Time primary-backup at 200 florets in 10/05 for the O(n) floor, and re-time under quorum in 11/16, which is the quadratic case. If the first is already slow, say so in the proposal rather than discovering it in November |
 | Floci EC2 coverage is partial | The claim that the same Terraform is exercised locally and on hardware may not hold for EC2 instances | Verify what Floci actually supports before 11/30. Treat it as syntax and plan validation, not a substitute for the real runs |
 | AWS credit limits and instance termination between sessions | No state survives | Already assumed in the design. Confirm instances are down after every session |
 

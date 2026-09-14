@@ -12,11 +12,39 @@ Event model, ack rules per mode, and the decisions behind them.
 >   point here for the reasoning. `check/staleness.go` is unwritable until this
 >   file justifies it.
 > - `structure.md` cites this file for why primary-backup has no leases.
-> - `plan.md` 09/14 lists it as the week's deliverable.
+> - `plan.md` 09/14 lists it as the week's deliverable, and 09/21 freezes the
+>   message envelope — so the read path has to be settled before that freeze,
+>   not after it.
 
 ## Event model
 
 ## Messages
+
+## The read path
+
+The single question the other documents are waiting on. Read quorum, follower
+routing and the caching claim are all this one thing, and the shape three
+files already assume is:
+
+- A read names the floret that answers it: `ClientRead{Key, At FloretID}`.
+- In quorum mode that floret gathers a majority using `Read`/`ReadReply` and
+  returns the newest version it sees. The bound is zero, and violable.
+- In primary-backup that floret answers from its own store. The primary is
+  fresh; a follower is stale by however much, and that is measured rather than
+  bounded.
+- `real/api.go` carries the same selector over HTTP, or there is no follower
+  staleness to measure on real hardware.
+
+What this section still owes:
+
+- Which version a read quorum returns when replies disagree, and whether it
+  writes the winner back.
+- Whether a read quorum is allowed to fail rather than return a stale value,
+  and what the client sees when it does.
+- Whether a follower read is allowed at all in quorum mode, or whether the
+  mode implies the quorum path unconditionally.
+- What monotonic reads means concretely for the checker: per client, per key,
+  per floret, and what a client identity is in a simulated run.
 
 ## Ack rules
 

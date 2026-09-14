@@ -21,11 +21,14 @@ diaspore/
 ├── core/                        THE PURE LAYER — no I/O, no clocks, no goroutines
 │   ├── floret.go                Floret struct, Step(event) -> []Message
 │   ├── state.go                 Per-floret state: store, pending writes, peer view
-│   ├── event.go                 Event types: ClientWrite, ClientRead, MsgRecv, Timer
-│   ├── message.go               Wire messages: Replicate, Ack
+│   ├── event.go                 Event types: ClientWrite, ClientRead{Key, At FloretID},
+│                                 MsgRecv, Timer
+│   ├── message.go               Wire messages: Replicate, Ack, Read, ReadReply.
+│                                 Read and ReadReply exist for the quorum read path
 │   ├── store.go                 In-memory key-value map with versions
 │   ├── version.go               Version vectors, comparison, conflict resolution
-│   ├── mode_quorum.go           Quorum replication: majority ack before commit
+│   ├── mode_quorum.go           Quorum: majority ack before commit, and a majority
+│                                 read quorum on the read path
 │   ├── mode_primary.go          Primary-backup: static primary, async fanout.
 │                                 No leases, no reassignment — see design.md
 │   ├── clock.go                 Logical clock, incremented only by Step. Payload
@@ -36,7 +39,7 @@ diaspore/
 │   ├── capitulum.go             New(n, seed), Step() bool, Florets(), Kill(), Sever()
 │   ├── clock.go                 Virtual clock, advances only when the queue advances
 │   ├── queue.go                 Priority queue of scheduled events
-│   ├── faults.go                Fault controller: the six injected faults
+│   ├── faults.go                Fault controller: four core faults, two additive
 │   ├── rand.go                  The ONLY randomness source, seeded
 │   ├── workload.go              Expands a pappus.Profile into ClientWrite and ClientRead
 │                                 events on the virtual clock, drawing from rand.go
@@ -48,13 +51,16 @@ diaspore/
 │   ├── runtime.go               Goroutine per floret, drives the same core.Floret
 │   ├── transport.go             TCP peer connections, framing, timeouts
 │   ├── clock.go                 Wall clock and real timers
-│   ├── api.go                   HTTP key-value API for clients
+│   ├── api.go                   HTTP key-value API. Reads take a floret selector, so a
+│                                 client can read a named follower and its staleness
 │   └── admin.go                 In-process fault injection endpoints
 │
 ├── pappus/                      The portable unit. Imports core/ and nothing else
 │   ├── format.go                Manifest schema: seed, config, workload profile, fault
 │   │                            schedule, protocol version, trace
 │   ├── trace.go                 Trace and TraceRecord types — the serialised event log
+│   ├── encode.go                Canonical byte encoding of a Trace. Written in 10/05 for
+│                                 the determinism test; write.go wraps it in 11/09
 │   ├── profile.go               Workload profile: key space, read/write ratio, arrival
 │   │                            rate, client count. Part of the manifest, because a run
 │   │                            is not reproducible without it
@@ -137,7 +143,10 @@ Everything points inward. `core/` is the only package with no dependencies of
 its own, and `pappus/` is the only other package `check/` is allowed to know
 about.
 
-`check/` reads a `pappus.Trace`, never a live `Capitulum`. That is deliberate:
+`check/` reads a whole `pappus.Pappus`, never a live `Capitulum`. It takes the
+manifest rather than the trace alone because two of the three invariants need
+the configuration: `staleness.go` cannot pick a bound without knowing the mode,
+and `divergence.go` cannot say who should agree without the membership. That is deliberate:
 `check/` is on the never-cut list and the simulator is not, so the checker must
 not depend on a runtime. It is also why the trace type lives in `pappus/` —
 the manifest is what gets handed to another machine, and the checker runs
@@ -169,7 +178,7 @@ only a scheduler.
 | `pappus.Write(p Pappus, path string)` | Export a run |
 | `pappus.Read(path string)` | Load a run |
 | `type pappus.Profile struct` | Workload definition, expanded by capitulum, replayed by loadgen |
-| `check.Run(t pappus.Trace) []Violation` | Check a trace, with no runtime in scope |
+| `check.Run(p pappus.Pappus) []Violation` | Check a run: the trace plus the config it needs |
 | `dandelion.Sweep(seeds, workers int)` | Run the sweep |
 
 File extension: `.pappus`
