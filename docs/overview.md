@@ -188,16 +188,32 @@ none is claimed, because any number would be invented to be checked against. Fol
 is measured and its distribution reported. What is asserted for followers instead is that reads
 are monotonic: one client, reading one key from one floret, never sees the value go backwards.
 
+The zero is conditional on a question that is still open. It holds only if a read quorum never
+answers with a value it could not confirm with a majority — and whether a quorum read may
+degrade to a possibly stale answer during a partition, rather than failing, is undecided. If
+degrading is allowed, the bound is zero only while a majority is reachable and this invariant
+has to be restated. [`design.md`](design.md) carries the question.
+
 That second half depends on a client being able to address a read to a particular floret, which
 is unusual for a key-value store and is done here because the thing being measured is how stale
 a particular replica is. It also depends on knowing which client issued a read, so client
 operations carry an identity — a numbered request stream from the workload profile, and nothing
 more than that.
 
-**Replicas converge.** Once everything has settled — every message delivered or dropped, no
-client traffic outstanding — no two florets hold different values for the same key. The
-obvious alternative — asking whether two florets could both claim authority over a key — is
-something nothing here can do, because the primary is chosen once and never moves. An
+**Replicas converge.** Once the run has ended and the scheduler has no events left — anything
+still in flight was never delivered, which for the check is the same as dropped — no two
+florets disagree about the value of a key.
+
+Two things about that are deliberate. "Settled" is defined by the run ending rather than by
+every message being delivered or dropped, because under a partition that never heals messages
+are neither, and the invariant would be unevaluable in exactly the runs it exists for. And
+convergence is asserted within each group of florets that could still reach one another at the
+end, not across the whole cluster: if a partition has not healed, the two sides *should*
+disagree, and a global assertion would report correct behaviour as a violation. The checker
+knows which group is which because the fault schedule travels in the manifest.
+
+The obvious alternative — asking whether two florets could both claim authority over a key —
+is something nothing here can do, because the primary is chosen once and never moves. An
 invariant that cannot be violated is not a test. Divergence can be violated, through asynchronous fanout, a dropped replicate, a
 partition that heals, and a conflict rule that resolves the two sides differently.
 
@@ -251,10 +267,12 @@ instrumented. It is scheduled last and is the first item dropped if the schedule
 ## Figures
 
 1. Violation rate per thousand seeds against cluster size
-2. Convergence time against cluster size, simulated and real on one chart
-3. Messages exchanged per client write against cluster size
-4. Sweep throughput and time-to-first-violation against worker count
-5. Event timeline of a single replayed violation
+2. Messages exchanged per client write against cluster size
+3. Sweep throughput and time-to-first-violation against worker count
+4. Event timeline of a single replayed violation
+
+A fifth — convergence time against cluster size with the simulated and real curves on one
+chart — needs real mode, which is cut 2. It is conditional for the same reason axis 3 is.
 
 ---
 

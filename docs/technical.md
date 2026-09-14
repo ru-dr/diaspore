@@ -172,7 +172,11 @@ the end.
 **Reads respect the bound their mode states.** Under quorum the bound is zero,
 because the addressed floret asks a majority and returns the newest version it
 sees; a write a majority acknowledged cannot be missed by a later majority
-read, so any stale read is a violation. Under primary-backup a read from the
+read, so any stale read is a violation. That zero is conditional on a decision
+that is still open: whether a read quorum may answer with a possibly stale
+value during a partition rather than failing. If it may, the bound holds only
+while a majority is reachable and this invariant has to be restated. See
+[`design.md`](design.md). Under primary-backup a read from the
 primary is current and a read from a follower has no bound. No bound is
 claimed there deliberately: any number would be invented in order to be checked
 against, and the useful thing is the measured distribution. What is asserted
@@ -185,8 +189,14 @@ being measured is how stale a *particular* replica is. They also require
 knowing which client issued a read, so client operations carry an identity — a
 numbered request stream defined by the workload profile, and nothing more.
 
-**Replicas converge.** After quiescence, no two florets hold different values
-for the same key. The obvious alternative — asking whether two florets could
+**Replicas converge.** Once the run has ended and no events remain scheduled,
+no two florets disagree about the value of a key. "Settled" is defined by the
+run ending rather than by every message being delivered or dropped: under a
+partition that never heals messages are neither, and the invariant would be
+unevaluable in the runs it exists for. The assertion is also scoped to each
+group of florets that could still reach one another — across an unhealed
+partition the two sides should disagree, and checking globally would report
+correct behaviour as a violation. The obvious alternative — asking whether two florets could
 both claim authority over a key — is unviolatable here, because the primary is
 chosen once and never moves, so authority is constant. An invariant that cannot
 fail is not a check. Divergence is the failure this design can produce.
@@ -244,10 +254,14 @@ listed from the last thing cut to the first.
 ## 9. Figures to be produced
 
 - Violation rate per thousand seeds against cluster size
-- Convergence time against cluster size, simulated and real on one chart
 - Messages exchanged per client write against cluster size
 - Sweep throughput and time-to-first-violation against worker count
 - Event timeline of a single replayed violation
+
+One more, conditional for the same reason axis 3 is: convergence time against
+cluster size with the simulated and real curves on one chart needs real mode,
+which is cut 2. Without it the simulated curve stands alone and the chart is
+four figures rather than five.
 
 ## 10. Risks and mitigation
 
@@ -307,7 +321,7 @@ Assignment deadlines take precedence in every week. The two mastery weeks
 | `diaspore dandelion --seeds <n>` | Sweep many seeds, report invariant violations |
 | `diaspore pappus export --seed <n>` | Write a portable `.pappus` run file |
 | `diaspore pappus replay <file>` | Reproduce an identical run from a `.pappus` file |
-| `diaspore verify <file>` | Check a trace for lost writes and stale reads |
+| `diaspore verify <file>` | Check a run against all three invariants |
 | `diaspore real --peers <list>` | Run over TCP against a live cluster |
 | `diaspore watch` | Live terminal view of a running capitulum |
 

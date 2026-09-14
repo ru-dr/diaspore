@@ -40,7 +40,9 @@ diaspore/
 │   └── *_test.go                Unit tests per file
 │
 ├── capitulum/                   Deterministic runtime — owns florets, drives the event loop
-│   ├── capitulum.go             New(n, seed), Step() bool, Florets(), Kill(), Sever()
+│   ├── capitulum.go             New(cfg), Step() bool, Florets(), Kill(), Sever().
+│                                 The config is the manifest's, so a run and a replay of
+│                                 it are constructed the same way
 │   ├── clock.go                 Virtual clock, advances only when the queue advances
 │   ├── queue.go                 Priority queue of scheduled events
 │   ├── faults.go                Fault controller: four core faults, two additive
@@ -60,8 +62,9 @@ diaspore/
 │   └── admin.go                 In-process fault injection endpoints
 │
 ├── pappus/                      The portable unit. Imports core/ and nothing else
-│   ├── format.go                Manifest schema: seed, config, workload profile, fault
-│   │                            schedule, protocol version, trace
+│   ├── format.go                Manifest schema. Config is size, mode, workload profile,
+│   │                            fault schedule, protocol version and seed; the trace is
+│   │                            the rest
 │   ├── trace.go                 Trace and TraceRecord types — the serialised event log
 │   ├── encode.go                Canonical byte encoding of a Trace. Written in 10/05 for
 │                                 the determinism test; write.go wraps it in 11/09
@@ -76,7 +79,7 @@ diaspore/
 ├── dandelion/                   Parallel seed execution
 │   ├── sweep.go                 Sweep(seeds, workers int)
 │   ├── worker.go                One goroutine, independent seeds, no coordination
-│   └── report.go                Which seeds took root badly
+│   └── report.go                Which seeds took root badly, in the form plot.py reads
 │
 ├── check/                       Invariant checking
 │   ├── invariants.go            The three rules
@@ -100,7 +103,7 @@ diaspore/
 │
 ├── scripts/
 │   ├── experiment.sh            Full sweep, then real-mode confirmation
-│   └── plot.py                  Trace CSV -> matplotlib figures
+│   └── plot.py                  Sweep report and traces -> matplotlib figures
 │
 ├── docs/
 │   ├── assets/                  Logo and figures
@@ -181,7 +184,7 @@ only a scheduler.
 | `(c *Capitulum) Florets() []*Floret` | Membership |
 | `(c *Capitulum) Kill(id FloretID)` | Inject a crash |
 | `(c *Capitulum) Sever(a, b FloretID)` | Inject a partition |
-| `capitulum.New(n int, seed uint64)` | Construct a cluster |
+| `capitulum.New(cfg pappus.Config)` | Construct a run: size, mode, profile, fault schedule, seed |
 | `(c *Capitulum) Pappus() pappus.Pappus` | Build the manifest for this run |
 | `pappus.Write(p Pappus, path string)` | Export a run |
 | `pappus.Read(path string)` | Load a run |

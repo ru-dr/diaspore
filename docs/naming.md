@@ -57,7 +57,7 @@ Module path: `github.com/ru-dr/diaspore`
 | `(c *Capitulum) Florets() []*Floret` | Membership |
 | `(c *Capitulum) Kill(id FloretID)` | Inject a crash |
 | `(c *Capitulum) Sever(a, b FloretID)` | Inject a partition |
-| `capitulum.New(n int, seed uint64)` | Construct a cluster |
+| `capitulum.New(cfg pappus.Config)` | Construct a run: size, mode, profile, fault schedule, seed |
 | `(c *Capitulum) Pappus() pappus.Pappus` | Build the manifest for this run |
 | `pappus.Write(p Pappus, path string)` | Export a run |
 | `pappus.Read(path string)` | Load a run |

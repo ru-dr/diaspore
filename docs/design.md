@@ -105,6 +105,13 @@ bound true rather than aspirational: a write acknowledged by a majority cannot
 be missed by a later majority read, so any stale read at all is a real
 violation and not an expected consequence of asking the wrong replica.
 
+The zero is asserted here and in two other documents, and one of the open
+questions below could void it. If a read quorum is allowed to answer with a
+possibly stale value when it cannot reach a majority, rather than failing,
+then the bound is zero only while a majority is reachable and the invariant
+becomes conditional on availability. Deciding that question is therefore not
+only a read-path decision; it decides what invariant 2 says.
+
 Under primary-backup, the addressed floret answers from its own store. The
 primary is by definition current. A follower is behind by however much
 replication lag and fault injection have put there, and no bound is claimed
@@ -155,20 +162,41 @@ find one, and none is claimed.
 
 ## Convergence, not ownership
 
-The third invariant is that once everything has settled — every message either
-delivered or dropped, no client traffic outstanding — no two florets disagree
+The third invariant is that once traffic has settled, no two florets disagree
 about the value of a key.
 
-The obvious alternative is to ask whether two florets could both claim
-authority over a key. Nothing in this design can do that. The primary is chosen once and
-never moves, and there is no election, so authority is a constant. An invariant
-that cannot be violated is not a test, it is a sentence that always passes, and
-the checker written for it would have found nothing all semester.
+"Settled" needs a definition that a partitioned run can actually reach. Saying
+every message has been delivered or dropped does not work: under a partition
+that never heals, messages are neither, so the invariant would be unevaluable
+in precisely the runs it exists for. The definition used instead is that the
+run has ended and the scheduler has no events left. Anything still in flight
+at that point is never delivered, which for the purpose of the check is the
+same as dropped.
 
-Divergence is the failure this design can actually produce: asynchronous fanout
-drops a replicate, a partition heals, two replicas apply updates in different
-orders, and the conflict rule resolves them differently on each side. That is
-worth checking because it can fail.
+That leaves a second problem, and it is the more interesting one. If a
+partition has not healed by the end of the run, the two sides *should*
+disagree — that is what a partition is. Asserting that every floret in the
+cluster agrees would report a violation for behaviour that is correct.
+
+So convergence is asserted within each group of florets that could still
+reach one another when the run ended, not across the cluster. The checker
+knows the partition state because the fault schedule is in the manifest. If
+the partition healed, there is one group and the assertion is global; if it
+did not, each side is checked against itself. A disagreement inside a group
+that could communicate is a real violation. A disagreement across a break is
+the fault doing its job.
+
+The obvious alternative is to ask whether two florets could both claim
+authority over a key. Nothing in this design can do that. The primary is
+chosen once and never moves, and there is no election, so authority is a
+constant. An invariant that cannot be violated is not a test, it is a sentence
+that always passes, and the checker written for it would have found nothing
+all semester.
+
+Divergence is the failure this design can actually produce: asynchronous
+fanout drops a replicate, a partition heals, two replicas apply updates in
+different orders, and the conflict rule resolves them differently on each
+side. That is worth checking because it can fail.
 
 ## Why there are no leases
 

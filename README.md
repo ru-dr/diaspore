@@ -48,7 +48,7 @@ go build ./cmd/diaspore
 | `diaspore dandelion --seeds <n>` | Sweep many seeds, report invariant violations |
 | `diaspore pappus export --seed <n>` | Write a portable `.pappus` run file |
 | `diaspore pappus replay <file>` | Reproduce an identical run from a `.pappus` file |
-| `diaspore verify <file>` | Check a trace for lost writes and stale reads |
+| `diaspore verify <file>` | Check a run against all three invariants |
 | `diaspore real --peers <list>` | Run over TCP against a live cluster |
 | `diaspore watch` | Live terminal view of a running capitulum |
 

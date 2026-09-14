@@ -35,10 +35,14 @@ decided, not listed as open — and a repo that builds nothing.
       has to be able to group by one
 - [ ] `core/event.go` — `ClientWrite{Client, Key, Value}`, `ClientRead{Client, Key, At}`,
       `MsgRecv`, `Timer`
-- [ ] `core/message.go` — `Replicate`, `Ack`, `Read`, `ReadReply` between florets, and
-      `ClientReply` to a client. `Step` returns only messages, so a reply to a client has to
-      be one; it is also the record invariant 1 means by an acknowledged write, and without
-      it `lostwrites.go` has no acknowledgement set to check against
+- [ ] `core/message.go` — `Replicate` and `Ack` between florets, and `ClientReply` to a
+      client. `Step` returns only messages, so a reply to a client has to be one; it is also
+      the record invariant 1 means by an acknowledged write, and without it `lostwrites.go`
+      has no acknowledgement set to check against
+- [ ] `Read` and `ReadReply`, **if** the read path makes the addressed floret a coordinator.
+      If it answers locally instead, a quorum read never happens and those two do not exist.
+      That decision is a 09/14 task and has to land before this freeze — freezing a pair the
+      design may not want is as bad as freezing without one it does
 - [ ] Everything above lands before the freeze at the end of this week. The quorum read path
       in 11/16 and the checker in 11/23 both build on this envelope and neither can add to it
 - [ ] `pappus/profile.go` — the workload profile: key space, read/write ratio, arrival rate,

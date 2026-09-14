@@ -127,13 +127,30 @@ present("invariant 2: monotonic reads asserted instead",
         ["docs/overview.md", "docs/technical.md", "docs/design.md"],
         "monotonic")
 
+# The zero bound rests on an open question. Asserting it flat in three files
+# while design.md asks whether a quorum read may degrade is the same claim
+# made two ways.
+present("invariant 2: the zero bound is marked conditional",
+        ["docs/overview.md", "docs/technical.md", "docs/design.md"],
+        "zero is conditional", "could void it")
+
 # Invariant 3 is convergence. Ownership cannot be violated with a static
 # primary, so a checker written for it would find nothing.
 nowhere("invariant 3: ownership is not checkable here",
         r"concurrently owned|ownership\.go")
-present("invariant 3: convergence once traffic has settled",
+# Settled is defined by the run ending, not by every message being delivered
+# or dropped — under an unhealed partition messages are neither, and the
+# invariant would be unevaluable in the runs it exists for.
+present("invariant 3: settled means the run ended",
         ["docs/overview.md", "docs/technical.md", "docs/design.md"],
-        "quiescence", "everything has settled")
+        "run has ended", "run ending")
+nowhere("invariant 3: do not define settled as delivered-or-dropped",
+        r"(?:once|after) (?:everything|every message)[^.]{0,60}delivered or dropped")
+# Convergence is scoped to florets that could still reach one another. A
+# global assertion reports an unhealed partition as a violation.
+present("invariant 3: convergence is scoped to what could communicate",
+        ["docs/overview.md", "docs/technical.md", "docs/design.md"],
+        "could still reach one another", "reach one another")
 
 # An acknowledged write means a reply to a client, not a peer ack.
 present("invariant 1: acknowledgement is a reply to a client",
@@ -163,6 +180,32 @@ for name, text in DOCS.items():
         continue
     if re.search(r"watch.{0,60}then real mode.{0,60}then quorum", " ".join(text.split()), re.I):
         fail("cut order: only plan.md enumerates it", f"{name} reprints the list")
+
+# The envelope freeze cannot commit to messages the read path may not need.
+if "docs/plan.md" in DOCS and "coordinator or an answer" in FLAT.get("docs/design.md", ""):
+    if not re.search(r"`Read` and `ReadReply`, \*\*if\*\*", DOCS["docs/plan.md"]):
+        fail("freeze: read messages are contingent while the read path is open",
+             "plan.md 09/21 commits to them unconditionally")
+
+# verify checks all three invariants against a run, not two against a trace.
+nowhere("cli: verify checks three invariants, not two",
+        r"Check a trace for lost writes and stale reads")
+same_everywhere("cli: the table must match in README and technical.md",
+                r"\| `diaspore verify <file>` \| [^|]+ \|",
+                ["README.md", "docs/technical.md"])
+
+# A run is constructed from the manifest's configuration: two modes exist and
+# the profile drives the load, so size and seed alone cannot build one.
+nowhere("constructor: a run needs mode and profile, not just size and seed",
+        r"capitulum\.New\(n int, seed")
+
+# Nothing writes CSV.
+nowhere("figures: plot.py reads what the sweep actually emits", r"Trace CSV")
+
+# Figure 2 needs real mode, which is cut 2.
+present("figures: the real-versus-simulated chart is marked conditional",
+        ["docs/overview.md", "docs/technical.md"],
+        "conditional for the same reason")
 
 # Floci: CI cannot run the infra path before the Terraform exists.
 nowhere("floci: infra job cannot predate the Terraform",
