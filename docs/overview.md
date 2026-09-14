@@ -8,7 +8,6 @@ Deterministic replay and scalable failure search for replicated systems.
 
 [![Go](https://shieldcn.dev/badge/Go-1.27.1-00ADD8.svg?logo=go&logoColor=white)](https://go.dev)
 [![Terraform](https://shieldcn.dev/badge/Terraform-AWS-7B42BC.svg?logo=terraform&logoColor=white)](https://www.terraform.io)
-[![CI](https://shieldcn.dev/github/ru-dr/diaspore/ci.svg?label=build)](https://github.com/ru-dr/diaspore/actions)
 [![License](https://shieldcn.dev/badge/license-MIT-black.svg)](../LICENSE)
 [![Status](https://shieldcn.dev/badge/status-in_development-orange.svg)](#roadmap)
 
