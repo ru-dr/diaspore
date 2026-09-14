@@ -241,11 +241,21 @@ include. These are stated boundaries of the fault model, not omissions.
      client reading one key from one floret never sees the value go backwards.
 
    Both halves depend on a client being able to say *which* floret answers, so a read carries
-   the floret it is addressed to: `ClientRead{Key, At FloretID}`. In quorum mode that floret
-   runs the read quorum; in primary-backup it answers from its own store. Reading a named
-   follower is how follower staleness becomes measurable at all.
+   the floret it is addressed to: `ClientRead{Client, Key, At FloretID}`. In quorum mode that
+   floret runs the read quorum; in primary-backup it answers from its own store. Reading a
+   named follower is how follower staleness becomes measurable at all. Which floret a read
+   is addressed to is decided by the profile's read-target policy — uniform, primary, or
+   pinned per client — and that policy is in the manifest, because a run has to be
+   rebuildable from the manifest alone.
 3. After quiescence — every message delivered or dropped, no client traffic in flight — no two
    florets hold different values for the same key.
+
+Two of these need something recorded that the peer protocol does not give them. An
+acknowledged write is one for which a floret emitted a `ClientReply`, and that reply is a
+message like any other, so it lands in the trace with its timestamp — that is the set
+`lostwrites.go` checks against. Monotonic reads is asserted per client, so `ClientWrite` and
+`ClientRead` carry a `ClientID`; a client is a numbered request stream from the workload
+profile, and nothing more than that.
 
 Invariant 2 used to say "beyond the mode's stated staleness bound" while no document stated
 one, which left `check/staleness.go` unwritable. The bounds above are the statement;

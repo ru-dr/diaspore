@@ -51,6 +51,7 @@ Module path: `github.com/ru-dr/diaspore`
 | `type Capitulum struct` | A cluster |
 | `type Pappus struct` | A run manifest |
 | `type FloretID uint16` | Node identity |
+| `type ClientID uint16` | Client identity, needed to group monotonic reads |
 | `(f *Floret) Step(e Event) []Message` | The pure state machine |
 | `(c *Capitulum) Step() bool` | Advance one event |
 | `(c *Capitulum) Florets() []*Floret` | Membership |

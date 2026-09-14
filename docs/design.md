@@ -26,7 +26,13 @@ The single question the other documents are waiting on. Read quorum, follower
 routing and the caching claim are all this one thing, and the shape three
 files already assume is:
 
-- A read names the floret that answers it: `ClientRead{Key, At FloretID}`.
+- A read names its client and the floret that answers it:
+  `ClientRead{Client ClientID, Key, At FloretID}`. A client is a numbered
+  request stream from the workload profile, which is what makes monotonic
+  reads groupable at all.
+- Which floret a read is addressed to comes from the profile's read-target
+  policy — uniform, primary, or pinned per client — so it is in the manifest
+  and not in `workload.go`.
 - In quorum mode that floret gathers a majority using `Read`/`ReadReply` and
   returns the newest version it sees. The bound is zero, and violable.
 - In primary-backup that floret answers from its own store. The primary is
@@ -43,8 +49,11 @@ What this section still owes:
   and what the client sees when it does.
 - Whether a follower read is allowed at all in quorum mode, or whether the
   mode implies the quorum path unconditionally.
-- What monotonic reads means concretely for the checker: per client, per key,
-  per floret, and what a client identity is in a simulated run.
+- Whether a pinned client may be repinned mid-run, and if so whether
+  monotonic reads still holds across the move. The profile allows pinning; it
+  does not yet say whether the pin is permanent.
+- What a `ClientReply` carries for a failed or timed-out operation, since
+  invariant 1 only counts the ones that succeeded.
 
 ## Ack rules
 

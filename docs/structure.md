@@ -21,10 +21,14 @@ diaspore/
 ├── core/                        THE PURE LAYER — no I/O, no clocks, no goroutines
 │   ├── floret.go                Floret struct, Step(event) -> []Message
 │   ├── state.go                 Per-floret state: store, pending writes, peer view
-│   ├── event.go                 Event types: ClientWrite, ClientRead{Key, At FloretID},
-│                                 MsgRecv, Timer
-│   ├── message.go               Wire messages: Replicate, Ack, Read, ReadReply.
-│                                 Read and ReadReply exist for the quorum read path
+│   ├── client.go                ClientID, and what a client is: a numbered request
+│                                 stream from the profile, nothing more
+│   ├── event.go                 Event types: ClientWrite{Client, Key, Value},
+│                                 ClientRead{Client, Key, At FloretID}, MsgRecv, Timer
+│   ├── message.go               Replicate, Ack, Read, ReadReply between florets, and
+│                                 ClientReply to a client. A reply is a Message because
+│                                 Step returns only messages — and it is what invariant 1
+│                                 means by an acknowledged write
 │   ├── store.go                 In-memory key-value map with versions
 │   ├── version.go               Version vectors, comparison, conflict resolution
 │   ├── mode_quorum.go           Quorum: majority ack before commit, and a majority
@@ -62,8 +66,10 @@ diaspore/
 │   ├── encode.go                Canonical byte encoding of a Trace. Written in 10/05 for
 │                                 the determinism test; write.go wraps it in 11/09
 │   ├── profile.go               Workload profile: key space, read/write ratio, arrival
-│   │                            rate, client count. Part of the manifest, because a run
-│   │                            is not reproducible without it
+│   │                            rate, client count, and the read-target policy —
+│   │                            uniform, primary, or pinned per client. The policy is
+│   │                            here rather than in workload.go because a run must be
+│   │                            rebuildable from the manifest alone
 │   ├── write.go                 Serialize a run to .pappus
 │   └── read.go                  Load and validate a .pappus
 │
@@ -74,7 +80,8 @@ diaspore/
 │
 ├── check/                       Invariant checking
 │   ├── invariants.go            The three rules
-│   ├── lostwrites.go            Replay client log against final state
+│   ├── lostwrites.go            Acknowledged writes, taken from the ClientReply records
+│                                 in the trace, against final state
 │   ├── staleness.go             Staleness against the bound design.md states per mode
 │   ├── divergence.go            Replicas disagree on a key after quiescence
 │   └── report.go                Human-readable violation output
@@ -168,6 +175,7 @@ only a scheduler.
 | `type Capitulum struct` | A cluster |
 | `type Pappus struct` | A run manifest |
 | `type FloretID uint16` | Node identity |
+| `type ClientID uint16` | Client identity, needed to group monotonic reads |
 | `(f *Floret) Step(e Event) []Message` | The pure state machine |
 | `(c *Capitulum) Step() bool` | Advance one event |
 | `(c *Capitulum) Florets() []*Floret` | Membership |

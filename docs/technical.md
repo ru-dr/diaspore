@@ -146,7 +146,8 @@ Excluding them is a stated boundary of the fault model, not an omission.
 - After quiescence, no two florets hold different values for the same key.
 
 Both halves of the second invariant need a client that can name the floret
-answering a read, so a read carries its target: `ClientRead{Key, At FloretID}`.
+answering a read, so a read carries its target and its client:
+`ClientRead{Client, Key, At FloretID}`.
 In quorum mode the addressed floret runs a majority read quorum, which is what
 makes a zero bound meaningful and violable. In primary-backup it answers from
 its own store, which is how a follower's staleness becomes measurable.
@@ -159,6 +160,13 @@ The third is convergence rather than ownership. With a static primary and no
 election, authority never moves, so no key can have two claimants; divergence
 through asynchronous fanout, a dropped replicate and a healed partition is the
 failure this design can actually produce.
+
+Two of these need something recorded that the peer protocol does not give them. An
+acknowledged write is one for which a floret emitted a `ClientReply`, and that reply is a
+message like any other, so it lands in the trace with its timestamp — that is the set
+`lostwrites.go` checks against. Monotonic reads is asserted per client, so `ClientWrite` and
+`ClientRead` carry a `ClientID`; a client is a numbered request stream from the workload
+profile, and nothing more than that.
 
 An earlier draft left the second invariant citing "the mode's stated staleness
 bound" while no document stated one, which made `check/staleness.go`
@@ -198,11 +206,14 @@ Split the way the cut order in [`plan.md`](plan.md) splits everything else.
 - Measured results along axes 1 and 2
 - A set of committed reproductions of discovered failures
 
-**Conditional on the schedule.** Each is in the cut order and may not ship.
+**Conditional on the schedule.** Each is in the cut order and may not ship,
+listed from the last thing cut to the first.
 
-- The second replication mode, and with it two runtimes rather than one
-- A Terraform-provisioned AWS environment
-- Axis 3: the simulated curve validated against real hardware
+- The second replication mode: quorum alongside primary-backup — cut 3
+- A Terraform-provisioned AWS environment — part of cut 2
+- A second runtime: real mode over TCP on EC2 — cut 2
+- Axis 3: the simulated curve validated against real hardware — cut 2
+- `diaspore watch`, the live terminal view — cut 1, the first to go
 
 ## 9. Figures to be produced
 

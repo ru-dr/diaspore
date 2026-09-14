@@ -26,12 +26,20 @@ before it are the runway that gets you to the first of them.
 
 ## Week of 09/21
 
-- [ ] `core/event.go`, `core/message.go` — types only, no logic. `ClientRead` carries the
-      floret it is addressed to; the wire messages are `Replicate`, `Ack`, `Read`,
-      `ReadReply`. The read pair exists now because the envelope freezes this week and the
-      quorum read path in 11/16 cannot add to it afterwards
-- [ ] `pappus/profile.go` — the workload profile type. It is needed before anything can
-      generate a client request, and it belongs to the manifest
+- [ ] `core/client.go` — `ClientID`. Monotonic reads is asserted per client, so the checker
+      has to be able to group by one
+- [ ] `core/event.go` — `ClientWrite{Client, Key, Value}`, `ClientRead{Client, Key, At}`,
+      `MsgRecv`, `Timer`
+- [ ] `core/message.go` — `Replicate`, `Ack`, `Read`, `ReadReply` between florets, and
+      `ClientReply` to a client. `Step` returns only messages, so a reply to a client has to
+      be one; it is also the record invariant 1 means by an acknowledged write, and without
+      it `lostwrites.go` has no acknowledgement set to check against
+- [ ] Everything above lands before the freeze at the end of this week. The quorum read path
+      in 11/16 and the checker in 11/23 both build on this envelope and neither can add to it
+- [ ] `pappus/profile.go` — the workload profile: key space, read/write ratio, arrival rate,
+      client count, and the read-target policy (uniform, primary, or pinned per client).
+      The policy belongs here rather than in `workload.go`, or the run is not rebuildable
+      from the manifest
 - [ ] `core/floret.go` — the `Step(event) -> []Message` signature, stubbed
 - [ ] `core/store.go` — in-memory versioned key-value map
 - [ ] Freeze the message envelope format
@@ -46,7 +54,9 @@ before it are the runway that gets you to the first of them.
 - [ ] `capitulum/capitulum.go` — `New(n, seed)`, `Step() bool`, `Florets()`
 - [ ] `capitulum/rand.go` — the single seeded randomness source
 - [ ] `capitulum/workload.go` — expand a `pappus.Profile` into client events on the virtual
-      clock. Nothing outside the seeded controller may generate a request
+      clock: which client, which key, read or write, and for a read which floret answers,
+      all from the profile and the one seeded source. Nothing outside the seeded controller
+      may generate a request, and no choice it makes may come from anywhere but the manifest
 - [ ] `core/mode_primary.go` — primary-backup, ack immediately, fanout after
 
 **Deliverable:** one simulated run advances through events on a virtual clock.
@@ -167,7 +177,9 @@ project.
 - [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `divergence.go` — `check.Run`
       takes a whole `pappus.Pappus`: `staleness.go` needs the mode to pick a bound and
       `divergence.go` needs the membership to know who should agree, and both are config
-      rather than trace. The third invariant is convergence after quiescence,
+      rather than trace. `lostwrites.go` builds its acknowledgement set from the
+      `ClientReply` records in the trace; `staleness.go` groups monotonic reads by
+      `ClientID`. The third invariant is convergence after quiescence,
       not ownership: with a static primary and no election, no key can ever have two
       claimants. `staleness.go` checks against the per-mode bound design.md states
 - [ ] `cmd/diaspore/verify.go`
