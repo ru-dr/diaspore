@@ -159,8 +159,8 @@ The third invariant is that once everything has settled — every message either
 delivered or dropped, no client traffic outstanding — no two florets disagree
 about the value of a key.
 
-An earlier version asked instead whether two florets could both claim authority
-over a key. Nothing in this design can do that. The primary is chosen once and
+The obvious alternative is to ask whether two florets could both claim
+authority over a key. Nothing in this design can do that. The primary is chosen once and
 never moves, and there is no election, so authority is a constant. An invariant
 that cannot be violated is not a test, it is a sentence that always passes, and
 the checker written for it would have found nothing all semester.

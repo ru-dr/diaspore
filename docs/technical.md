@@ -93,6 +93,12 @@ It reads the same metrics already written for the figures, so nothing
 additional is instrumented. It is scheduled last, in the week of December 7,
 and is the first item dropped if the schedule tightens.
 
+That week freezes the system under test rather than the repository. Once
+figures are being produced, changing the replication logic would mean the
+figures describe something that no longer exists. A read-only view over metrics
+already being written changes nothing the figures depend on, which is why it is
+the one thing that may still be built that week.
+
 ## 4. Local emulation and cost control
 
 The AWS environment available for this course is credit-limited and terminates
@@ -159,7 +165,7 @@ Excluding them is a stated boundary of the fault model, not an omission.
 **No acknowledged write is lost.** An acknowledgement means a reply sent to a
 client, recorded in the trace with the time it happened — not the
 acknowledgement florets exchange while replicating, which is a different event
-and was for a long time the only one recorded. The checker reads the set of
+and is easy to mistake for this one. The checker reads the set of
 client replies and asks whether every write they confirmed is still present at
 the end.
 
@@ -180,10 +186,10 @@ knowing which client issued a read, so client operations carry an identity — a
 numbered request stream defined by the workload profile, and nothing more.
 
 **Replicas converge.** After quiescence, no two florets hold different values
-for the same key. The third invariant used to ask whether two florets could
-both claim authority over a key, which is unviolatable here: the primary is
-chosen once and never moves, so authority is constant. Divergence is the
-failure this design can produce.
+for the same key. The obvious alternative — asking whether two florets could
+both claim authority over a key — is unviolatable here, because the primary is
+chosen once and never moves, so authority is constant. An invariant that cannot
+fail is not a check. Divergence is the failure this design can produce.
 
 Each violation is reported together with the seed that produced it, so any
 finding is independently reproducible by a third party.
@@ -202,7 +208,7 @@ are in [`design.md`](design.md).
 | Service API | HTTP key-value interface; CLI surface |
 | Load Testing & Threads | Client workload driver; sweep throughput scaling |
 | Caching | Follower replicas as an unbounded read cache; staleness measured, not asserted |
-| Data | Versioned store, version vectors, conflict resolution |
+| Data | Versioned store and conflict resolution; version vectors if they survive cut 5, last-write-wins by timestamp otherwise |
 | Leaders, Followers, Time, Events | Primary and follower roles, logical clocks, event ordering |
 | Testing & Messaging | Invariant checking; replication message protocol |
 
@@ -249,7 +255,9 @@ listed from the last thing cut to the first.
 
 A single unguarded clock read, map iteration, or stray goroutine inside the
 core breaks replay silently. Mitigated by a test that executes the same seed
-twice and compares traces byte for byte, enforced in CI from week five onward.
+twice and compares traces byte for byte, enforced in CI from the week of
+Oct 5 — named rather than counted, because this is the date the rest of the
+schedule is measured against and an off-by-one here is expensive.
 
 Comparing bytes rather than structures also puts the encoding under test. An
 encoder that walked a map in a different order on the second run would break
@@ -282,7 +290,7 @@ They are the project.
 | Oct 26 | Proposal; event model and core skeleton complete |
 | Nov 02 | Midterm week; run format designed on paper only |
 | Nov 09 | Simulated runtime, virtual clock, determinism test in CI |
-| Nov 16 | Fault controller; logical clocks; both replication modes |
+| Nov 16 | Fault controller; logical clocks; both replication modes, including quorum's read path |
 | Nov 23 | Invariant checker; parallel sweep; first findings |
 | Nov 30 | Terraform environment; real mode on EC2; validation runs |
 | Dec 07 | Final mastery week; figures and written findings |

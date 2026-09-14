@@ -196,10 +196,10 @@ operations carry an identity — a numbered request stream from the workload pro
 more than that.
 
 **Replicas converge.** Once everything has settled — every message delivered or dropped, no
-client traffic outstanding — no two florets hold different values for the same key. An earlier
-draft asked instead whether two florets could both claim authority over a key, which nothing
-here can do: the primary is chosen once and never moves. An invariant that cannot be violated
-is not a test. Divergence can be violated, through asynchronous fanout, a dropped replicate, a
+client traffic outstanding — no two florets hold different values for the same key. The
+obvious alternative — asking whether two florets could both claim authority over a key — is
+something nothing here can do, because the primary is chosen once and never moves. An
+invariant that cannot be violated is not a test. Divergence can be violated, through asynchronous fanout, a dropped replicate, a
 partition that heals, and a conflict rule that resolves the two sides differently.
 
 Each violation is reported with the seed that produced it, so any finding is independently
@@ -267,8 +267,10 @@ instrumented. It is scheduled last and is the first item dropped if the schedule
 
 ## Roadmap
 
-Split the way the plan's cut order splits it, so this list is not a promise the schedule
-already intends to break.
+Split so that this list is not a promise the schedule already intends to break. It answers a
+different question from the cut order in [`plan.md`](plan.md): that list says what gets dropped
+first under pressure, this one says what has to exist for there to be a result at all. The two
+are not the same partition and should not be read as one.
 
 **The project.** Not reducible — without these there is no result.
 

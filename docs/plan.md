@@ -16,11 +16,16 @@ before it are the runway that gets you to the first of them.
 - [ ] `docs/design.md`: the event model, the invariants, the two modes and their exact ack
       rules, and the staleness bound per mode — `check/staleness.go` cannot be written until
       this file names one
+- [ ] Settle the read path in `docs/design.md`. It is the one section still open, and the
+      envelope freezes at the end of next week: whether the addressed floret coordinates a
+      quorum or answers locally decides which messages exist, and nothing after 09/21 can add
+      to them
 - [ ] `docs/naming.md`: the naming reference, committed so it stops drifting
 - [ ] `go mod init github.com/ru-dr/diaspore`, package skeleton, `Makefile`, README
 - [ ] `deploy/Dockerfile` and `docker-compose.yml`
 
-**Deliverable:** a design doc someone else could build from, and a repo that builds nothing.
+**Deliverable:** a design doc someone else could build from — which means the read path
+decided, not listed as open — and a repo that builds nothing.
 
 ---
 
@@ -93,7 +98,9 @@ every result downstream depends on it.
 - [ ] `cmd/diaspore/run.go` — `diaspore run --seed`
 - [ ] `capitulum/faults.go` — add crash-restart and message drop
 - [ ] `real/api.go` — HTTP key-value endpoints, with a floret selector on reads so a client
-      can address a named follower. Without it there is no follower staleness to measure
+      can address a named follower. Without it there is no follower staleness to measure.
+      This belongs to real mode, which is cut 2, so it is the first thing to drop *within*
+      this week — the simulated path above it is not
 
 **Deliverable:** one command runs a seeded simulation with a crash in it, twice, identically.
 
@@ -101,9 +108,17 @@ every result downstream depends on it.
 
 ## Week of 10/19
 
-- [ ] `capitulum/faults.go` — add delay, reorder, partition. All six present
+- [ ] `capitulum/faults.go` — add partition, which completes the four core faults
+- [ ] `capitulum/faults.go` — add delay and reorder if the week allows. These two are cut 4,
+      so the model has a floor of four and a ceiling of six, and shipping four is not a
+      shortfall
 - [ ] `real/admin.go` — in-process fault injection endpoints
 - [ ] `cmd/loadgen` — configurable concurrency, per-request timing log
+
+Both of those belong to real mode and are cut 2, scheduled here because the runway weeks have
+room and the sweep does not start until 11/23. If a week runs short, they are what gives — the
+cut order says real mode goes before the sweep, and the schedule must not quietly invert that
+by having built one and not the other.
 - [ ] Rehearse the proposal demo
 
 **Deliverable:** proposal demo ready — run a seed, show the failure, run it again, show it
@@ -139,10 +154,13 @@ Stated milestone: simulated runtime, virtual clock, determinism test in CI. If t
 above held, this is already done and this week buys you slack — use it on the sweep, not on
 polish.
 
-- [ ] `core/version.go` — version vectors, comparison, conflict resolution
 - [ ] `pappus/write.go`, `pappus/read.go` — export and load a run. `Write` takes the
       manifest, not a `*Capitulum`: `pappus/` must not learn what a runtime is
 - [ ] `cmd/diaspore/pappus.go` — `pappus export` and `pappus replay`
+- [ ] `core/version.go` — version vectors, comparison, conflict resolution. This is cut 5,
+      the most droppable thing in the project, so it goes last in the week and only if the
+      manifest work lands early. Last-write-wins by timestamp is the fallback and costs
+      nothing to keep
 
 **Deliverable:** hand a `.pappus` file to another machine and get the identical run.
 
@@ -150,7 +168,10 @@ polish.
 
 ## Week of 11/16
 
-Stated milestone: fault controller, logical clocks, both replication modes.
+Stated milestone: fault controller, logical clocks, both replication modes — where both modes
+means both halves of each, so quorum's read path is inside the milestone rather than extra.
+The 200-floret re-timing below is not part of it; it is a measurement this week makes possible
+for the first time.
 
 - [ ] `core/clock.go` — logical clocks driven only by `Step`, and add the value as a field on
       the trace record. The trace stays ordered by virtual time; this is payload
@@ -213,7 +234,12 @@ Stated milestone: Terraform environment, real mode on EC2, validation runs.
 
 ## Week of 12/07 — Final mastery
 
-**15% of your grade.** Freeze the code.
+**15% of your grade.** Freeze the system under test — not the repository.
+
+Once figures are being produced, changing the replication logic means the figures describe
+something that no longer exists. A read-only view over metrics already being written changes
+nothing they depend on, which is why `diaspore watch` is the one thing that may still be built
+this week.
 
 - [ ] Final mastery
 - [ ] `scripts/plot.py` — the five figures
@@ -246,11 +272,16 @@ Cut in this order. Each cut leaves a project that still stands on its own.
    point. This also takes the performance-failure class, which only delay produces
 5. Version vectors — last-write-wins by timestamp will do
 
-Never cut: the determinism test, the `.pappus` format, or the sweep. Those three *are* the
-project.
+Never cut: the determinism test, the `.pappus` format, or the sweep. Those three are the ones
+that will look droppable at 2am in December — each is a week of work whose absence is not
+immediately visible in a demo — and cutting any of them leaves a project that demonstrates
+nothing. They are not the whole of what must exist; they are the part of it that is in danger.
 
-This list is the authority. The roadmap in [`overview.md`](overview.md) is split along the
-same line, and nothing outside it should read as a promise.
+This list is the authority on what gets dropped, and in what order. The roadmap in
+[`overview.md`](overview.md) answers the other question, which is what has to exist for there
+to be a result at all. The two are not the same partition: the event model and the pure core
+are irreducible without ever appearing here, because nobody reaches December considering
+cutting them.
 
 ---
 
