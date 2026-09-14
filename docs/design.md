@@ -99,23 +99,35 @@ belongs in the profile because the profile travels inside the run manifest,
 and a run that cannot be rebuilt from its manifest is not reproducible — which
 is the property the entire project exists to provide.
 
-Under quorum, the addressed floret does not answer alone. It asks a majority
-and returns the newest version it sees. That is what makes the zero staleness
-bound true rather than aspirational: a write acknowledged by a majority cannot
-be missed by a later majority read, so any stale read at all is a real
-violation and not an expected consequence of asking the wrong replica.
+Provisionally, and this is the part to be careful about:
 
-The zero is asserted here and in two other documents, and one of the open
-questions below could void it. If a read quorum is allowed to answer with a
+Under quorum the addressed floret does not answer alone. It asks a majority
+and returns the newest version it sees. That is what would make the zero
+staleness bound true rather than aspirational: a write acknowledged by a
+majority cannot be missed by a later majority read, so any stale read at all
+would be a real violation and not an expected consequence of asking the wrong
+replica.
+
+Under primary-backup the addressed floret answers from its own store.
+
+That pair — coordinate under quorum, answer locally under primary-backup — is
+the shape the other documents are written against. It is not decided. It is
+the first open question below, and the reason it is worth separating from the
+decisions above is that everything in this paragraph changes if it goes the
+other way: if the addressed floret always answers locally, there is no quorum
+read, the zero bound is not available at all, and two wire messages that the
+09/21 freeze would otherwise commit to do not exist.
+
+The zero is asserted in two other documents, and a second open question below
+could void it independently. If a read quorum is allowed to answer with a
 possibly stale value when it cannot reach a majority, rather than failing,
 then the bound is zero only while a majority is reachable and the invariant
 becomes conditional on availability. Deciding that question is therefore not
 only a read-path decision; it decides what invariant 2 says.
 
-Under primary-backup, the addressed floret answers from its own store. The
-primary is by definition current. A follower is behind by however much
-replication lag and fault injection have put there, and no bound is claimed
-for it. That is a decision, not an omission: any bound would be a number
+Under primary-backup the primary is by definition current. A follower is
+behind by however much replication lag and fault injection have put there,
+and no bound is claimed for it. That is a decision, not an omission: any bound would be a number
 invented to be checked against, and the honest thing is to measure the
 distribution and report it. What is asserted for followers instead is
 monotonicity, which is a property the system should have regardless of how far
@@ -123,6 +135,15 @@ behind a replica is.
 
 What is not decided, and what would settle each:
 
+- **Whether the addressed floret coordinates a quorum or simply answers.**
+  This is the one to decide first: it settles the two below it, it decides
+  whether a read request and reply exist on the wire at all, and the envelope
+  freezes on 09/21. Coordinating gives quorum a zero bound and makes follower
+  reads meaningless in that mode, so pinning becomes a primary-backup idea.
+  Answering locally makes pinning mean the same thing in both modes and makes
+  the zero bound unavailable, which means invariant 2 says something else.
+  Settled by choosing what the project is measuring: the protocol as it would
+  be deployed, or replica staleness directly.
 - **What a read quorum returns when its replies disagree, and whether it
   writes the winner back.** Reading repair changes the fault behaviour being
   measured, because a read would then heal the divergence a later check is
@@ -135,8 +156,7 @@ What is not decided, and what would settle each:
 - **Whether follower reads exist in quorum mode at all.** If the mode implies
   the quorum path unconditionally, addressing a read to a follower means
   something different in each mode, and the profile's pinning option applies
-  to only one of them. Settled by deciding whether the addressed floret is a
-  coordinator or an answer.
+  to only one of them.
 - **Whether a pinned client may be repinned during a run.** The profile allows
   pinning; it does not say whether a pin is permanent. Monotonic reads across a
   move to a different replica is a stronger claim than monotonic reads at one,

@@ -134,6 +134,14 @@ present("invariant 2: the zero bound is marked conditional",
         ["docs/overview.md", "docs/technical.md", "docs/design.md"],
         "zero is conditional", "could void it")
 
+# The read path's shape is provisional until the first open question is
+# answered, so no document may state it as settled.
+present("read path: the coordinator shape is marked provisional",
+        ["docs/design.md"], "Provisionally")
+present("read path: the other documents say the shape is undecided",
+        ["docs/overview.md", "docs/technical.md"],
+        "coordinates a quorum at all", "coordinates a quorum, which is itself undecided")
+
 # Invariant 3 is convergence. Ownership cannot be violated with a static
 # primary, so a checker written for it would find nothing.
 nowhere("invariant 3: ownership is not checkable here",

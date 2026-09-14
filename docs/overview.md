@@ -188,11 +188,16 @@ none is claimed, because any number would be invented to be checked against. Fol
 is measured and its distribution reported. What is asserted for followers instead is that reads
 are monotonic: one client, reading one key from one floret, never sees the value go backwards.
 
-The zero is conditional on a question that is still open. It holds only if a read quorum never
-answers with a value it could not confirm with a majority — and whether a quorum read may
-degrade to a possibly stale answer during a partition, rather than failing, is undecided. If
-degrading is allowed, the bound is zero only while a majority is reachable and this invariant
-has to be restated. [`design.md`](design.md) carries the question.
+Two open questions sit under that, and both are in [`design.md`](design.md).
+
+The larger one is whether the addressed floret coordinates a quorum at all, or simply answers
+from its own store in both modes. Everything above assumes it coordinates under quorum. If it
+does not, there is no quorum read, the zero bound is not available, and this invariant says
+something else entirely.
+
+The smaller one assumes the first went the coordinating way: whether a quorum read may degrade
+to a possibly stale answer during a partition rather than failing. If it may, the zero holds
+only while a majority is reachable. Either way the zero is conditional, not settled.
 
 That second half depends on a client being able to address a read to a particular floret, which
 is unusual for a key-value store and is done here because the thing being measured is how stale

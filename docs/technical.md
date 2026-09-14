@@ -172,10 +172,12 @@ the end.
 **Reads respect the bound their mode states.** Under quorum the bound is zero,
 because the addressed floret asks a majority and returns the newest version it
 sees; a write a majority acknowledged cannot be missed by a later majority
-read, so any stale read is a violation. That zero is conditional on a decision
-that is still open: whether a read quorum may answer with a possibly stale
-value during a partition rather than failing. If it may, the bound holds only
-while a majority is reachable and this invariant has to be restated. See
+read, so any stale read is a violation. That description assumes the addressed
+floret coordinates a quorum, which is itself undecided — if it answers from
+its own store instead, there is no quorum read and no zero bound to state. A
+second open question could void the zero even if the first goes the
+coordinating way: whether a quorum read may answer with a possibly stale value
+during a partition rather than failing. The zero is conditional on both. See
 [`design.md`](design.md). Under primary-backup a read from the
 primary is current and a read from a follower has no bound. No bound is
 claimed there deliberately: any number would be invented in order to be checked
