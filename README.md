@@ -130,6 +130,7 @@ Plurals are florets and capitula. Never capitulums. Full reference in
 | Document | What is in it |
 |---|---|
 | [`docs/overview.md`](docs/overview.md) | The long form: scaling axes, fault model, invariants, figures |
+| [`docs/technical.md`](docs/technical.md) | Architecture, the fault model, invariants, schedule and risks |
 | [`docs/design.md`](docs/design.md) | Event model, ack rules per mode, the decisions and why |
 | [`docs/structure.md`](docs/structure.md) | Package layout, import direction, key identifiers |
 | [`docs/naming.md`](docs/naming.md) | Naming reference, including terms deliberately rejected |

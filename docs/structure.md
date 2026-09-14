@@ -79,7 +79,9 @@ diaspore/
 │
 ├── docs/
 │   ├── assets/                  Logo and figures
-│   ├── design.md                Design doc: event model, invariants, decisions
+│   ├── overview.md              The long form: scaling axes, fault model, figures
+│   ├── technical.md             Technical document: architecture, faults, schedule
+│   ├── design.md                Design doc: event model, ack rules, decisions
 │   ├── naming.md                Naming reference — keep open while writing code
 │   ├── structure.md             This file
 │   ├── plan.md                  Week-by-week schedule

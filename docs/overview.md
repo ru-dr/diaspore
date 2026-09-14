@@ -9,7 +9,7 @@ Deterministic replay and scalable failure search for replicated systems.
 [![Go](https://img.shields.io/badge/Go-1.23-00ADD8?logo=go&logoColor=white)](https://go.dev)
 [![Terraform](https://img.shields.io/badge/Terraform-AWS-7B42BC?logo=terraform&logoColor=white)](https://www.terraform.io)
 [![CI](https://img.shields.io/github/actions/workflow/status/ru-dr/diaspore/ci.yml?branch=main&label=build)](https://github.com/ru-dr/diaspore/actions)
-[![License](https://img.shields.io/badge/license-MIT-black)](LICENSE)
+[![License](https://img.shields.io/badge/license-MIT-black)](../LICENSE)
 [![Status](https://img.shields.io/badge/status-in%20development-orange)](#roadmap)
 
 [Why](#why) · [How it works](#how-it-works) · [Why this is a scalability project](#why-this-is-a-scalability-project) · [Quick start](#quick-start) · [CLI](#cli) · [Architecture](#architecture) · [Faults](#faults-injected) · [Roadmap](#roadmap)
@@ -316,13 +316,13 @@ several florets, each run exporting one pappus.
 Plurals are florets and capitula. Never capitulums.
 
 Full reference, including the terms deliberately rejected, is in
-[`docs/naming.md`](docs/naming.md).
+[`docs/naming.md`](naming.md).
 
 ---
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](../LICENSE).
 
 ---
 
