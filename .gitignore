@@ -1,0 +1,18 @@
+# Go
+*.exe
+*.test
+*.out
+bin/
+diaspore
+loadgen
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+
+# Local
+.env
+.DS_Store
+__pycache__/
