@@ -213,9 +213,9 @@ same fact stated in two places is a fact that can disagree with itself.
 Two documents carry a second copy on purpose. `technical.md` is submitted and
 has to stand alone, so it restates the invariants and the five names. The
 README is a front page and carries the command list a user needs without
-opening anything else. Both copies are compared by `scripts/check_docs.py`,
-which fails the build if they stop matching.
+opening anything else. When either copy changes, the other has to change with
+it in the same commit.
 
 Everything else is stated once and linked to. Adding a fact to a second
-document means adding it to that script as an owned table or a tracked claim,
-or not adding it.
+document means accepting that it can now disagree with the first, so the
+answer is usually not to add it.
