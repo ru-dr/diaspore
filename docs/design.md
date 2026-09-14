@@ -1,79 +1,206 @@
 # Design
 
-Event model, ack rules per mode, and the decisions behind them.
+What this system does and why it does it that way. The companion document,
+[`technical.md`](technical.md), describes the apparatus; this file argues for
+the decisions inside it. Where something is still open, it says so and says
+what would settle it, rather than inventing an answer to look finished.
 
-> Not written yet. [`technical.md`](technical.md) is the guide for this file:
-> it states the architecture, the fault model and the invariants, and this is
-> where those become concrete decisions with reasons attached.
->
-> Due **09/21, 9:00 AM**. Three other documents already defer to it:
->
-> - `overview.md` and `technical.md` state the staleness bound per mode and
->   point here for the reasoning. `check/staleness.go` is unwritable until this
->   file justifies it.
-> - `structure.md` cites this file for why primary-backup has no leases.
-> - `plan.md` 09/14 lists it as the week's deliverable, and 09/21 freezes the
->   message envelope — so the read path has to be settled before that freeze,
->   not after it.
+---
 
-## Event model
+## The event model
 
-## Messages
+Every input to a floret is an event: a client asking to write, a client asking
+to read, a message arriving from a peer, or a timer firing. A floret consumes
+one event and produces some messages. That is the whole interface.
+
+The reason is not elegance. It is that a thing with one input channel and one
+output channel can be driven by a scheduler, and a scheduler can be made
+deterministic. Anything a floret could do behind that interface — read a
+clock, sleep, spawn a goroutine, open a socket — is a second input channel
+that the scheduler does not control, and therefore a source of variation
+between two runs of the same seed. The rule that the core may not do any of
+those things is not hygiene; it is what makes replay possible at all.
+
+The cost is real and worth stating. Logic that would naturally be written as
+"send this, wait for the acks, then commit" has to be turned inside out into
+state held across events. Every pending write becomes a record with a tally
+attached. That is more code and less obvious code than the blocking version,
+and it is the price of the property the whole project rests on.
+
+## Two modes, and why both
+
+The system under test is an in-memory replicated key-value store. It is
+deliberately unambitious, because it is apparatus rather than contribution.
+
+It has two replication modes. Under **quorum**, a write is acknowledged once a
+majority of florets have stored it. Under **primary-backup**, one statically
+chosen floret acknowledges immediately and replicates to the others
+afterwards.
+
+Both exist because they fail differently, not because one is better. Quorum
+trades latency for a guarantee that survives a minority failing. Primary-backup
+trades that guarantee for latency, and in exchange offers a window — between
+the acknowledgement and the fanout — in which an acknowledged write exists in
+exactly one place. Losing a floret inside that window is a specific, findable
+bug that quorum cannot produce. Comparing their latency is not an objective;
+producing two distinct failure classes for the sweep to search is.
+
+## What counts as an acknowledged write
+
+The first invariant is that no acknowledged write is lost. That sentence is
+only checkable if "acknowledged" has a recorded meaning, and for most of this
+project's life it did not: florets acknowledge each other during replication,
+and that is a different event from telling a client its write succeeded.
+
+The decision is that a floret's reply to a client is one of the messages it
+emits, like any other, and is therefore written to the trace with the time it
+happened. The set of acknowledged writes is exactly the set of those replies.
+The checker reads that set out of the trace and asks whether each one is still
+present in the final state.
+
+This costs something: a reply to a client is not a wire message between peers,
+and putting both in one output channel means the channel carries two kinds of
+thing. The alternative was a separate output for client responses, which would
+have given the state machine two return paths and every runtime two things to
+drain. One channel and a destination that may be a client is the smaller
+complication.
+
+## Client identity
+
+Reads are asserted to be monotonic per client: one client, reading one key
+from one floret, never sees the value go backwards. That requires knowing
+which client issued a read, so every client operation carries an identity.
+
+A client here is not a process or a connection. It is a numbered stream of
+requests produced by the workload profile — a label that groups requests so
+the checker can reason about ordering within a group. Nothing else about the
+system depends on it, and deliberately so: giving clients sessions, or state,
+or affinity beyond what the profile says, would add a component with its own
+failure modes to a system that is meant to be apparatus.
 
 ## The read path
 
-The single question the other documents are waiting on. Read quorum, follower
-routing and the caching claim are all this one thing, and the shape three
-files already assume is:
+This is the part with the most still open, and it is the part everything else
+waits on, because the staleness invariant, the follower-as-cache claim and the
+quorum guarantee are all statements about how a read is served.
 
-- A read names its client and the floret that answers it:
-  `ClientRead{Client ClientID, Key, At FloretID}`. A client is a numbered
-  request stream from the workload profile, which is what makes monotonic
-  reads groupable at all.
-- Which floret a read is addressed to comes from the profile's read-target
-  policy — uniform, primary, or pinned per client — so it is in the manifest
-  and not in `workload.go`.
-- In quorum mode that floret gathers a majority using `Read`/`ReadReply` and
-  returns the newest version it sees. The bound is zero, and violable.
-- In primary-backup that floret answers from its own store. The primary is
-  fresh; a follower is stale by however much, and that is measured rather than
-  bounded.
-- `real/api.go` carries the same selector over HTTP, or there is no follower
-  staleness to measure on real hardware.
+What is decided:
 
-What this section still owes:
+A read is addressed to a particular floret. The client names it. This is
+unusual for a key-value store, which would normally hide replica selection
+behind the API, and it is done here because the thing being measured is how
+stale a *particular* replica is. A read that lands wherever the system chooses
+cannot answer that question.
 
-- Which version a read quorum returns when replies disagree, and whether it
-  writes the winner back.
-- Whether a read quorum is allowed to fail rather than return a stale value,
-  and what the client sees when it does.
-- Whether a follower read is allowed at all in quorum mode, or whether the
-  mode implies the quorum path unconditionally.
-- Whether a pinned client may be repinned mid-run, and if so whether
-  monotonic reads still holds across the move. The profile allows pinning; it
-  does not yet say whether the pin is permanent.
-- What a `ClientReply` carries for a failed or timed-out operation, since
-  invariant 1 only counts the ones that succeeded.
+Which floret a read is addressed to is decided by the workload profile, not by
+the code that generates load. The profile can say that reads go anywhere, that
+they prefer the primary, or that each client is pinned to one floret. This
+belongs in the profile because the profile travels inside the run manifest,
+and a run that cannot be rebuilt from its manifest is not reproducible — which
+is the property the entire project exists to provide.
 
-## Ack rules
+Under quorum, the addressed floret does not answer alone. It asks a majority
+and returns the newest version it sees. That is what makes the zero staleness
+bound true rather than aspirational: a write acknowledged by a majority cannot
+be missed by a later majority read, so any stale read at all is a real
+violation and not an expected consequence of asking the wrong replica.
 
-### Quorum
+Under primary-backup, the addressed floret answers from its own store. The
+primary is by definition current. A follower is behind by however much
+replication lag and fault injection have put there, and no bound is claimed
+for it. That is a decision, not an omission: any bound would be a number
+invented to be checked against, and the honest thing is to measure the
+distribution and report it. What is asserted for followers instead is
+monotonicity, which is a property the system should have regardless of how far
+behind a replica is.
 
-*Write quorum, read quorum, and why the staleness bound is zero.*
+What is not decided, and what would settle each:
 
-### Primary-backup
+- **What a read quorum returns when its replies disagree, and whether it
+  writes the winner back.** Reading repair changes the fault behaviour being
+  measured, because a read would then heal the divergence a later check is
+  looking for. Settled by deciding whether the sweep is measuring the system
+  as it would be deployed or the replication protocol in isolation.
+- **Whether a read quorum may fail rather than return a possibly stale value,
+  and what the client sees when it does.** This is the availability half of
+  the partition question. Settled by choosing what the second invariant should
+  mean during a partition: unavailable, or available and stale.
+- **Whether follower reads exist in quorum mode at all.** If the mode implies
+  the quorum path unconditionally, addressing a read to a follower means
+  something different in each mode, and the profile's pinning option applies
+  to only one of them. Settled by deciding whether the addressed floret is a
+  coordinator or an answer.
+- **Whether a pinned client may be repinned during a run.** The profile allows
+  pinning; it does not say whether a pin is permanent. Monotonic reads across a
+  move to a different replica is a stronger claim than monotonic reads at one,
+  and only one of those is asserted. Settled by deciding whether repinning is
+  part of the workload or part of the fault model.
+- **What a reply carries when an operation fails or times out.** The first
+  invariant counts successful acknowledgements only, so failures need a
+  representation the checker can tell apart from success. Settled alongside the
+  availability question above, since they produce the same cases.
 
-*Why the primary acknowledges before fanout, what a follower read may return,
-and why no bound is claimed for it — only monotonic reads.*
+## Staleness, and the cache it implies
 
-### Why no leases
+Under quorum the bound is zero and any stale read is a violation. Under
+primary-backup a read from the primary is current and a read from a follower is
+unbounded.
 
-*A lease implies the primary can be reassigned. There is no election here, so
-say what happens when the static primary dies: writes stop, and that is a
-finding.*
+The consequence worth naming is that a follower replica is a read cache with no
+coherence guarantee. That is the honest form of the caching claim elsewhere in
+these documents: the project does not implement a cache with a bounded
+staleness, it implements replicas that can be read directly and it measures how
+far behind they are. Anyone expecting a cache invalidation protocol will not
+find one, and none is claimed.
 
-## Invariants
+## Convergence, not ownership
 
-## Decisions and why
+The third invariant is that once everything has settled — every message either
+delivered or dropped, no client traffic outstanding — no two florets disagree
+about the value of a key.
 
-## Open questions
+An earlier version asked instead whether two florets could both claim authority
+over a key. Nothing in this design can do that. The primary is chosen once and
+never moves, and there is no election, so authority is a constant. An invariant
+that cannot be violated is not a test, it is a sentence that always passes, and
+the checker written for it would have found nothing all semester.
+
+Divergence is the failure this design can actually produce: asynchronous fanout
+drops a replicate, a partition heals, two replicas apply updates in different
+orders, and the conflict rule resolves them differently on each side. That is
+worth checking because it can fail.
+
+## Why there are no leases
+
+Primary-backup here has a static primary and no heartbeats. A lease is a
+mechanism for handing the role to someone else when the holder stops
+responding, and handing the role to someone else is election, which this design
+excludes.
+
+Excluding it is what keeps the system small enough to be apparatus. It also
+creates a specific behaviour that has to be stated rather than discovered:
+when the primary dies, writes stop. That is not a bug to be fixed later. It is
+the failure mode of the mode, and the sweep should report it as one.
+
+## What this design cannot find
+
+Three classes of failure are out of scope by construction, and it is worth
+being direct about them so that a reader does not assume the sweep covers more
+ground than it does.
+
+A floret that lies — returning different answers to different peers — would
+need signed messages and quorum arithmetic that tolerates dishonesty. That is a
+second project, not a feature.
+
+A floret that returns wrong values or makes invalid transitions would require
+deliberately corrupting the state machine, which would break the determinism
+the rest of the work depends on. The tool cannot inject the fault without
+destroying its own foundation.
+
+A floret that is degraded but still answers health checks cannot be detected
+without a health-checking subsystem, and there is none.
+
+These are boundaries of the fault model, chosen deliberately. Every fault the
+system does inject is scheduled by the seeded controller, which is why the
+fault timeline is part of what a seed determines and why a finding is
+reproducible from the seed alone.

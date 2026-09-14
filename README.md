@@ -53,45 +53,50 @@ go build ./cmd/diaspore
 | `diaspore real --peers <list>` | Run over TCP against a live cluster |
 | `diaspore watch` | Live terminal view of a running capitulum |
 
-A seed alone does not reproduce a run — cluster size, fault schedule and protocol version all
-participate. A `.pappus` file carries them together with the event trace, so handing someone
-that file hands them the entire failure.
+A seed alone does not reproduce a run — cluster size, workload profile, fault schedule and
+protocol version all participate. A `.pappus` file carries them together with the event trace,
+so handing someone that file hands them the entire failure. The workload is in there for the
+same reason as the rest: a run that cannot be rebuilt from its manifest is not reproducible.
 
 ---
 
 ## How it works
 
-The replication logic is a pure state machine expressed as `Step(event) -> []Message`. It
-imports nothing that can read a clock, sleep, generate randomness, or touch the network.
+The replication logic is a pure state machine. It takes one event at a time — a client
+request, a message from a peer, a timer — and produces messages. It cannot read a clock,
+sleep, generate randomness, or touch the network.
 
-That one constraint lets the same code run two ways.
+That restriction is the whole design. Something with a single input channel can be driven by a
+scheduler, and a scheduler can be made to behave identically twice. Every capability the logic
+does not have is an input nobody would control.
 
 ```
-        ┌──────────────────────────────────────┐
-        │  core/     floret state machine      │
-        │            no I/O, no clocks         │
-        └──────────────────────────────────────┘
-                  ▲                  ▲
-                  │                  │
-   ┌──────────────┴───────┐   ┌──────┴──────────────┐
-   │  capitulum/          │   │  real/              │
-   │  event queue         │   │  TCP transport      │
-   │  virtual clock       │   │  goroutine runtime  │
-   │  seeded faults       │   │  real timers        │
-   └──────────┬───────────┘   └─────────────────────┘
-              │
-              ▼
-        .pappus file ──▶ check/ ──▶ violations
-              │
-              ▼
-        dandelion/ ──▶ parallel sweep
+          ┌────────────────────────────────┐
+          │   the pure core                │
+          │   one event in, messages out   │
+          └────────────────────────────────┘
+                  ▲                ▲
+      ┌───────────┴──────┐  ┌──────┴────────────┐
+      │ deterministic    │  │ live runtime      │
+      │ runtime          │  │ real clock, TCP   │
+      │ virtual clock    │  │ real timers       │
+      │ seeded faults    │  │                   │
+      └────────┬─────────┘  └───────────────────┘
+               │
+               ▼
+        run manifest ────▶ checker ────▶ violations
+               │
+               ▼
+        the sweep: thousands of seeds in parallel
 ```
 
-**Simulated** — one goroutine, a priority queue, a virtual clock that advances only when the
-queue does, so a thirty-second scenario runs in milliseconds. Fully deterministic.
+**Simulated** — one goroutine, a queue of scheduled events, a virtual clock that advances only
+when the queue does, so a thirty-second scenario runs in milliseconds. Client load comes from
+the same seeded scheduler; a load generator with its own clock would be a hole in the floor.
 
-**Real** — a goroutine per floret, TCP with framing and timeouts, real timers, HTTP key-value
-API. Faults injected in-process rather than by touching the network.
+**Real** — a goroutine per floret, TCP with framing and timeouts, real timers, an HTTP
+interface. Faults injected in-process rather than by touching the network, so an injected
+partition is the same partition every time.
 
 Hunt bugs in simulation, then check whether the real world agrees.
 
@@ -99,9 +104,13 @@ Hunt bugs in simulation, then check whether the real world agrees.
 
 ## Determinism, and how it is protected
 
-One stray clock read, one map iteration, one goroutine inside `core/`, and replay breaks
-silently. A test runs the same seed twice and diffs the traces byte for byte, in CI on every
-commit.
+One stray clock read, one map iteration, one goroutine inside the core, and replay breaks
+silently. A test runs the same seed twice and diffs the recorded traces byte for byte, in CI
+on every commit.
+
+Bytes rather than structures, deliberately — that puts the encoding under test too. An encoder
+that walked a map in a different order on the second run would break replay just as thoroughly
+as the core doing it, and a structural comparison would not notice.
 
 If that test goes red, nothing else in the repo can be trusted.
 

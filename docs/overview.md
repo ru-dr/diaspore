@@ -12,7 +12,7 @@ Deterministic replay and scalable failure search for replicated systems.
 [![License](https://shieldcn.dev/badge/license-MIT-black.svg)](../LICENSE)
 [![Status](https://shieldcn.dev/badge/status-in_development-orange.svg)](#roadmap)
 
-[Why](#why) · [How it works](#how-it-works) · [Why this is a scalability project](#why-this-is-a-scalability-project) · [Quick start](#quick-start) · [CLI](#cli) · [Architecture](#architecture) · [Faults](#faults-injected) · [Roadmap](#roadmap)
+[Why](#why) · [How it works](#how-it-works) · [Why this is a scalability project](#why-this-is-a-scalability-project) · [What success looks like](#what-success-looks-like) · [Faults](#faults-injected) · [Roadmap](#roadmap)
 
 </div>
 
@@ -36,29 +36,37 @@ Same seed, same execution, every time. A bug stops being an anecdote and becomes
 
 ## How it works
 
-The replication logic is a **pure state machine**. It imports nothing that can read a clock,
-sleep, generate randomness, or touch the network. Everything it does is expressed as
-`Step(event) -> []Message`.
+The replication logic is a pure state machine. It consumes one event — a client request, a
+message from a peer, a timer — and produces messages. It cannot read a clock, sleep, generate
+randomness, or touch the network.
 
-That one constraint lets the same code run two ways.
+That restriction is the whole design. A component with a single input channel can be driven by
+a scheduler, and a scheduler can be made to behave identically twice. Anything the logic could
+do behind that interface would be a second input nobody controls, and two runs of one seed
+would diverge. The restriction costs real clarity — logic that wants to say "send, wait, then
+commit" has to be turned inside out into state carried between events — and it buys the only
+property that matters here.
 
-**Simulated** — a single goroutine driving a priority queue of events against a virtual clock.
-Time advances only when the queue advances, so a thirty-second scenario executes in
-milliseconds. The only randomness source is seeded.
+The same state machine then runs two ways.
 
-Client load is part of that. In simulation nothing outside the seeded controller may generate
-a request: `capitulum/workload.go` expands a workload profile into `ClientWrite` and
-`ClientRead` events on the virtual clock, drawing from the one seeded source. A load generator
-with its own clock or its own randomness would be a determinism leak in the least affordable
-place, so there is not one. The profile is stored in the `.pappus` manifest, because a run
-that cannot be rebuilt from the manifest is not reproducible.
+**Simulated.** One goroutine drives a queue of scheduled events against a virtual clock. Time
+advances only when the queue does, so a scenario spanning thirty seconds finishes in
+milliseconds and a cluster far larger than any affordable hardware is reachable. Every
+non-determinate choice — fault timing, message ordering, which client acts next — comes from
+one seeded source.
 
-**Real** — a goroutine per floret, TCP transport with framing and timeouts, real timers, and an
-HTTP key-value API. `cmd/loadgen` replays the same profile over HTTP here, where a real clock
-is the point. Faults are injected in-process through admin endpoints rather than by
-manipulating the network, which keeps injected partitions deterministic and repeatable.
+Client load is part of that. Nothing outside the seeded scheduler may generate a request. A
+load generator with its own clock or its own randomness would be a leak in exactly the place
+the project cannot afford one, so there is not one: the scheduler expands a workload profile
+into client requests itself. The profile travels inside the run manifest, because a run that
+cannot be rebuilt from its manifest is not reproducible.
 
-So you hunt bugs in simulation, then check whether the real world agrees.
+**Real.** A goroutine per floret, TCP between them with framing and timeouts, real timers, and
+an HTTP interface for clients. Faults are injected in-process rather than by interfering with
+the network, so an injected partition is the same partition every time. The same workload
+profile drives it, replayed over HTTP, where a real clock is the point rather than a hazard.
+
+Hunt bugs in simulation, then check whether the real world agrees.
 
 ---
 
@@ -110,90 +118,27 @@ key-value store with two replication modes.
 **Primary-backup.** A statically assigned primary acknowledges immediately and replicates
 asynchronously.
 
-Both exist because they produce distinct failure classes. Comparing their latency is not an
-objective of the project.
+Both exist because they fail differently, not because either is better. Primary-backup opens a
+window between acknowledging a write and replicating it, in which an acknowledged write lives
+in one place only; losing a floret inside that window is a bug quorum cannot produce.
+Comparing their latency is not an objective of the project.
 
 There is no leader election, no disk persistence, and no gRPC. Each omission removes a failure
-mode that would consume time without advancing the question.
-
----
-
-## Quick start
-
-```bash
-git clone https://github.com/ru-dr/diaspore
-cd diaspore
-go build ./cmd/diaspore
-./diaspore run --seed 8837421 --faults crash,partition,delay
-./diaspore dandelion --seeds 1000
-```
-
-`dandelion` scatters a thousand seeded runs and reports the ones that broke an invariant. Named
-for what it does — one source, a thousand landings, and you find out which ones took root badly.
-
----
-
-## CLI
-
-| Command | What it does |
-|---|---|
-| `diaspore run --seed <n>` | Execute one simulated run under a given seed |
-| `diaspore dandelion --seeds <n>` | Sweep many seeds, report invariant violations |
-| `diaspore pappus export --seed <n>` | Write a portable `.pappus` run file |
-| `diaspore pappus replay <file>` | Reproduce an identical run from a `.pappus` file |
-| `diaspore verify <file>` | Check a trace for lost writes and stale reads |
-| `diaspore real --peers <list>` | Run over TCP against a live cluster |
-| `diaspore watch` | Live terminal view of a running capitulum |
-
-Verbs stay plain so the interface self-describes. Nouns carry the theme.
-
-A seed alone does not reproduce a run — cluster size, fault schedule and protocol version all
-participate. These are serialised together with the recorded event trace into a single
-`.pappus` file. Handing someone that file hands them the entire failure.
-
----
-
-## Architecture
-
-```
-        ┌──────────────────────────────────────┐
-        │  core/     floret state machine      │
-        │            no I/O, no clocks         │
-        └──────────────────────────────────────┘
-                  ▲                  ▲
-                  │                  │
-   ┌──────────────┴───────┐   ┌──────┴──────────────┐
-   │  capitulum/          │   │  real/              │
-   │  event queue         │   │  TCP transport      │
-   │  virtual clock       │   │  goroutine runtime  │
-   │  seeded faults       │   │  real timers        │
-   └──────────┬───────────┘   └─────────────────────┘
-              │
-              ▼
-        .pappus file ──▶ check/ ──▶ violations
-              │
-              ▼
-        dandelion/ ──▶ parallel sweep
-```
-
-| Path | Role |
-|---|---|
-| `core/` | Floret and its replication state machine. Deterministic by construction. |
-| `capitulum/` | Owns florets, drives the event loop, virtual clock, seeded fault controller |
-| `real/` | TCP transport and goroutine runtime for live clusters |
-| `pappus/` | Run manifest: read, write, validate |
-| `dandelion/` | Parallel seed execution |
-| `check/` | Reads a trace, reports violations |
-| `cmd/diaspore` | CLI |
-| `infra/` | Terraform for the AWS environment |
+mode that would consume time without advancing the question. The absence of election has a
+visible consequence rather than a hidden one: when the static primary dies, writes stop. That
+is the failure mode of the mode, and the sweep should report it as one.
 
 ---
 
 ## Determinism, and how it is protected
 
-One stray clock read, one map iteration, one goroutine inside `core/`, and replay breaks
+One stray clock read, one map iteration, one goroutine inside the pure core, and replay breaks
 silently. Diaspore guards against that with a test that runs the same seed twice and diffs the
-traces byte for byte. It runs in CI on every commit.
+recorded traces byte for byte. It runs in CI on every commit.
+
+Comparing bytes rather than structures is deliberate, and it means the encoding is under test
+too — an encoder that iterates a map in a different order on the second run would break replay
+just as thoroughly as the core doing it, and a structural comparison would not notice.
 
 If that test goes red, nothing else in the repo can be trusted.
 
@@ -220,55 +165,48 @@ With delay present, sustained delay under load additionally produces performance
 behaviour, where the capitulum responds but too slowly to be useful. If delay is cut, that
 class goes with it and is not claimed.
 
-**Deliberately out of scope**, for reasons of design rather than time: Byzantine failure, which
-would need message signing and Byzantine-tolerant quorum arithmetic; response failure, which
-would require corrupting the state machine and so break the determinism guarantee the project
-rests on; and gray failure, which needs a health-checking subsystem this design does not
-include. These are stated boundaries of the fault model, not omissions.
+**Deliberately out of scope**, for reasons of design rather than time: a floret that lies would
+need signed messages and quorum arithmetic tolerant of dishonesty, which is a second project; a
+floret returning wrong values would require corrupting the state machine and so breaking the
+determinism everything else rests on; and a floret degraded but still passing health checks
+cannot be detected without a health-checking subsystem this design does not have. These are
+stated boundaries of the fault model, not omissions.
 
 ---
 
 ## Invariants checked
 
-1. No acknowledged write is lost.
-2. Reads respect the bound their mode states:
-   - **Quorum** — reads go through a majority read quorum, so the bound is **zero**. Any write
-     that was acknowledged is visible to every read that follows it. A stale read at all is a
-     violation.
-   - **Primary-backup** — a read served by the primary has a bound of **zero**. A read served
-     by a follower has **no bound**, and none is claimed: follower staleness is measured and
-     reported, not asserted. What is asserted for followers is **monotonic reads** — one
-     client reading one key from one floret never sees the value go backwards.
+**No acknowledged write is lost.** An acknowledgement here is a reply sent to a client, which
+is recorded in the trace with the time it happened — not the acknowledgement florets send each
+other while replicating, which is a different event. The checker takes the set of client
+replies and asks whether each write they confirmed survives in the final state.
 
-   Both halves depend on a client being able to say *which* floret answers, so a read carries
-   the floret it is addressed to: `ClientRead{Client, Key, At FloretID}`. In quorum mode that
-   floret runs the read quorum; in primary-backup it answers from its own store. Reading a
-   named follower is how follower staleness becomes measurable at all. Which floret a read
-   is addressed to is decided by the profile's read-target policy — uniform, primary, or
-   pinned per client — and that policy is in the manifest, because a run has to be
-   rebuildable from the manifest alone.
-3. After quiescence — every message delivered or dropped, no client traffic in flight — no two
-   florets hold different values for the same key.
+**Reads respect the bound their mode states.** Under quorum the bound is zero: the addressed
+floret asks a majority and returns the newest version it sees, so a write a majority
+acknowledged cannot be missed by a later read, and any stale read at all is a violation. Under
+primary-backup a read from the primary is current and a read from a follower has no bound —
+none is claimed, because any number would be invented to be checked against. Follower staleness
+is measured and its distribution reported. What is asserted for followers instead is that reads
+are monotonic: one client, reading one key from one floret, never sees the value go backwards.
 
-Two of these need something recorded that the peer protocol does not give them. An
-acknowledged write is one for which a floret emitted a `ClientReply`, and that reply is a
-message like any other, so it lands in the trace with its timestamp — that is the set
-`lostwrites.go` checks against. Monotonic reads is asserted per client, so `ClientWrite` and
-`ClientRead` carry a `ClientID`; a client is a numbered request stream from the workload
-profile, and nothing more than that.
+That second half depends on a client being able to address a read to a particular floret, which
+is unusual for a key-value store and is done here because the thing being measured is how stale
+a particular replica is. It also depends on knowing which client issued a read, so client
+operations carry an identity — a numbered request stream from the workload profile, and nothing
+more than that.
 
-Invariant 2 used to say "beyond the mode's stated staleness bound" while no document stated
-one, which left `check/staleness.go` unwritable. The bounds above are the statement;
-[`design.md`](design.md) carries the reasoning.
-
-The third is convergence, not ownership. An earlier draft asked whether two florets could both
-claim authority over a key, which nothing here can do: the primary is static and there is no
-election, so authority never moves. Divergence is the failure this design can actually produce,
-through asynchronous fanout, a dropped replicate, a partition that heals, and whatever the
-conflict-resolution rule then decides.
+**Replicas converge.** Once everything has settled — every message delivered or dropped, no
+client traffic outstanding — no two florets hold different values for the same key. An earlier
+draft asked instead whether two florets could both claim authority over a key, which nothing
+here can do: the primary is chosen once and never moves. An invariant that cannot be violated
+is not a test. Divergence can be violated, through asynchronous fanout, a dropped replicate, a
+partition that heals, and a conflict rule that resolves the two sides differently.
 
 Each violation is reported with the seed that produced it, so any finding is independently
 reproducible by a third party.
+
+The reasoning behind all three is in [`design.md`](design.md), along with the parts of the read
+path that are still open.
 
 ---
 
@@ -284,8 +222,8 @@ SDKs are pointed at it unchanged. It replaced LocalStack Community, which began 
 tokens in March 2026.
 
 - Terraform plans and applies are validated locally before any cloud spend.
-- CI runs the infrastructure path against Floci from the 11/30 week, when the Terraform and
-  the Floci compose file first exist. Before then CI is build, vet, test and the determinism
+- CI runs the infrastructure path against Floci from the 11/30 week, when the Terraform and the
+  emulator configuration first exist. Before then CI is build, vet, test and the determinism
   check. Either way the pipeline needs no cloud credentials.
 - EC2 time is spent only on the axis 3 validation runs.
 
@@ -298,7 +236,7 @@ tokens in March 2026.
 
 ## Live terminal interface
 
-`diaspore watch` renders a running capitulum live: one row per floret with its dispatch and
+A terminal view renders a running capitulum live: one row per floret with its dispatch and
 replication state, message counts, current logical clock, and a marker when an invariant is
 violated.
 
@@ -307,8 +245,7 @@ fault to be injected in front of the audience and the recovery — or failure �
 it happens rather than described after the fact.
 
 It reads the same metrics already written for the figures, so nothing additional is
-instrumented. It is scheduled last, in the week of December 7, and is the first item dropped if
-the schedule tightens.
+instrumented. It is scheduled last and is the first item dropped if the schedule tightens.
 
 ---
 
@@ -324,11 +261,7 @@ the schedule tightens.
 
 ## Findings
 
-> Populated as the sweep turns up violations.
-
-| Seed | Faults | Violation | Confirmed on real cluster |
-|---|---|---|---|
-| — | — | — | — |
+> Populated as the sweep turns up violations. See [`findings.md`](findings.md).
 
 ---
 
@@ -339,14 +272,14 @@ already intends to break.
 
 **The project.** Not reducible — without these there is no result.
 
-- [ ] Event and message types defined
-- [ ] `core/` floret state machine, primary-backup mode
-- [ ] `capitulum/` simulated runtime with virtual clock
+- [ ] The event model: what a floret consumes and what it emits
+- [ ] The pure replication core, primary-backup mode
+- [ ] The simulated runtime and its virtual clock
 - [ ] Same-seed determinism test in CI
 - [ ] Fault controller: crash, crash-restart, drop, partition
-- [ ] `.pappus` manifest format
+- [ ] The portable run manifest
 - [ ] Invariant checker
-- [ ] `dandelion` parallel sweep
+- [ ] Parallel sweep
 
 **Additive.** Each improves the result; each is droppable, in this order from the bottom up.
 
@@ -354,10 +287,11 @@ already intends to break.
 - [ ] Message delay and reorder faults
 - [ ] Quorum mode — one mode demonstrates the idea
 - [ ] Terraform environment, real mode on EC2, simulated versus real comparison
-- [ ] `diaspore watch`
+- [ ] The live terminal view
 
-Logical clocks are listed nowhere separately because they are a field on the trace record, not
-a milestone: the determinism test is ordered by the virtual clock and never waits on them.
+Logical clocks are not listed separately because they are recorded alongside each event rather
+than being a milestone: the determinism test is ordered by the virtual clock and never waits on
+them.
 
 ---
 
@@ -379,8 +313,7 @@ several florets, each run exporting one pappus.
 
 Plurals are florets and capitula. Never capitulums.
 
-Full reference, including the terms deliberately rejected, is in
-[`naming.md`](naming.md).
+Full reference, including the terms deliberately rejected, is in [`naming.md`](naming.md).
 
 ---
 

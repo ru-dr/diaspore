@@ -4,6 +4,11 @@
 
 CS 6650 — Building Scalable Distributed Systems · Fall 2026
 
+This document describes the apparatus: what is being built, what it can and
+cannot find, and what is being measured. The reasoning behind the design
+decisions inside it is in [`design.md`](design.md); the schedule is in
+[`plan.md`](plan.md).
+
 ---
 
 ## 1. System under test
@@ -11,52 +16,66 @@ CS 6650 — Building Scalable Distributed Systems · Fall 2026
 Deliberately modest, because it is apparatus rather than contribution: an
 in-memory replicated key-value store with two replication modes.
 
-- **Quorum.** A write is acknowledged after a majority of replicas have stored it.
-- **Primary-backup.** A statically assigned primary acknowledges immediately and
-  replicates asynchronously.
+Under **quorum**, a write is acknowledged once a majority of replicas have
+stored it. Under **primary-backup**, a statically assigned primary
+acknowledges immediately and replicates asynchronously afterwards.
 
-Two modes produce distinct failure classes, which is why both exist. Comparing
-their latency is not an objective of the project.
+Two modes exist because they produce distinct failure classes. Primary-backup
+opens a window between acknowledging a write and replicating it, during which
+an acknowledged write exists in one place only; a crash inside that window is a
+failure quorum cannot produce. Comparing their latency is not an objective.
 
 There is no leader election, no disk persistence, and no gRPC. Each omission
 removes a failure mode that would consume time without advancing the question.
+The absence of election is visible rather than hidden: when the static primary
+dies, writes stop, and that is the failure mode of the mode rather than a
+defect.
 
 ## 2. Architecture
 
 ### 2.1 The pure core
 
-`core/` holds the replication state machine. It imports nothing that can read a
-clock, sleep, generate randomness, or touch the network. If a package under
-`core/` ever needs one of those, the design is wrong.
+The replication logic consumes one event at a time and emits messages. It
+cannot read a clock, sleep, generate randomness, or touch the network.
 
-Everything it does is expressed as `Step(event) → []Message`.
+This is the load-bearing constraint. A component with one input channel can be
+driven by a scheduler, and a scheduler can be made to behave identically on two
+runs of the same seed. Any capability the logic had behind that interface would
+be an input nobody controls. The cost is that logic wanting to block on
+replies must instead carry state between events, which is more code and less
+obvious code than the blocking form.
 
 ### 2.2 Two runtimes
 
-- `capitulum/` — a single goroutine driving a priority queue of events against a
-  virtual clock. Time advances only when the queue advances, so a thirty-second
-  scenario executes in milliseconds. The only randomness source in the package
-  is seeded.
-- `real/` — a goroutine per node, TCP transport with framing and timeouts, real
-  timers, and an HTTP key-value API. Fault injection is done in-process via
-  admin endpoints rather than by manipulating the network, which keeps injected
-  partitions deterministic and repeatable.
+The **simulated** runtime is a single goroutine driving a priority queue of
+events against a virtual clock. Time advances only when the queue advances, so
+a thirty-second scenario executes in milliseconds. Every non-determinate choice
+comes from one seeded source.
 
-Both import `core/`. Neither imports the other.
+That includes client load. Nothing outside the seeded scheduler may generate a
+request, because a load generator with its own clock or randomness would defeat
+replay in the one place the project cannot afford it. The scheduler expands a
+workload profile into client requests itself, and the profile travels in the
+run manifest so that a run is rebuildable from the manifest alone.
 
-Client load belongs to the deterministic side too. In simulation,
-`capitulum/workload.go` expands a workload profile into client events on the
-virtual clock using the one seeded randomness source; nothing else may generate
-a request. `cmd/loadgen` replays the same profile over HTTP against the real
-runtime. The profile is part of the manifest, because a run that cannot be
-rebuilt from the manifest is not reproducible.
+The **real** runtime is a goroutine per floret, with TCP between them —
+framing, timeouts — real timers, and an HTTP interface for clients. Faults are
+injected in-process rather than by manipulating the network, which keeps an
+injected partition the same partition on every run. The same workload profile
+drives it, replayed over HTTP.
+
+Both runtimes drive the same core. Neither knows about the other.
 
 ### 2.3 The portable unit
 
-A seed alone does not reproduce a run — cluster size, workload profile, fault
-schedule, and protocol version all participate. These are serialised together with the
-recorded event trace into a single file. Transferring that file to another
-machine reproduces the execution exactly.
+A seed alone does not reproduce a run: cluster size, workload profile, fault
+schedule, and protocol version all participate. These are serialised together
+with the recorded event trace into a single file. Transferring that file to
+another machine reproduces the execution exactly.
+
+The trace belongs to that file rather than to the simulator, because the
+checker has to run against what was handed over rather than against a live
+cluster, and because the checker outlives the simulator in the cut order.
 
 ## 3. Live terminal interface
 
@@ -87,9 +106,10 @@ SDKs are pointed at it unchanged, which means the same infrastructure
 definitions are exercised locally and on real hardware.
 
 - Terraform plans and applies are validated locally before any cloud spend.
-- CI runs the infrastructure path against Floci from the week of Nov 30, when the
-  Terraform first exists. Before then CI is build, vet, test and the determinism
-  check. Either way the pipeline needs no cloud credentials.
+- CI runs the infrastructure path against Floci from the week of Nov 30, when
+  the Terraform and the emulator configuration first exist. Before then CI is
+  build, vet, test and the determinism check. Either way the pipeline needs no
+  cloud credentials.
 - EC2 time is spent only on the real-mode validation runs described in Axis 3
   of the proposal.
 
@@ -136,45 +156,40 @@ Excluding them is a stated boundary of the fault model, not an omission.
 
 ## 6. Invariants checked
 
-- No acknowledged write is lost.
-- Reads respect the bound their mode states. **Quorum** reads go through a
-  majority read quorum, so the bound is zero and any stale read is a violation.
-  **Primary-backup** reads from the primary have a bound of zero; follower
-  reads have no bound and none is claimed, so follower staleness is measured
-  rather than asserted, and what is asserted instead is **monotonic reads** —
-  one client, one key, one floret, never going backwards.
-- After quiescence, no two florets hold different values for the same key.
+**No acknowledged write is lost.** An acknowledgement means a reply sent to a
+client, recorded in the trace with the time it happened — not the
+acknowledgement florets exchange while replicating, which is a different event
+and was for a long time the only one recorded. The checker reads the set of
+client replies and asks whether every write they confirmed is still present at
+the end.
 
-Both halves of the second invariant need a client that can name the floret
-answering a read, so a read carries its target and its client:
-`ClientRead{Client, Key, At FloretID}`.
-In quorum mode the addressed floret runs a majority read quorum, which is what
-makes a zero bound meaningful and violable. In primary-backup it answers from
-its own store, which is how a follower's staleness becomes measurable.
+**Reads respect the bound their mode states.** Under quorum the bound is zero,
+because the addressed floret asks a majority and returns the newest version it
+sees; a write a majority acknowledged cannot be missed by a later majority
+read, so any stale read is a violation. Under primary-backup a read from the
+primary is current and a read from a follower has no bound. No bound is
+claimed there deliberately: any number would be invented in order to be checked
+against, and the useful thing is the measured distribution. What is asserted
+for followers instead is monotonicity — one client, reading one key from one
+floret, never sees the value go backwards.
 
-That is also the honest form of the caching claim in section 7: a follower
-replica is a read cache with no coherence bound, and the project measures its
-staleness rather than asserting one.
+Both halves require a client that can address a read to a particular floret,
+which is unusual for a key-value store and is the point here: the quantity
+being measured is how stale a *particular* replica is. They also require
+knowing which client issued a read, so client operations carry an identity — a
+numbered request stream defined by the workload profile, and nothing more.
 
-The third is convergence rather than ownership. With a static primary and no
-election, authority never moves, so no key can have two claimants; divergence
-through asynchronous fanout, a dropped replicate and a healed partition is the
-failure this design can actually produce.
-
-Two of these need something recorded that the peer protocol does not give them. An
-acknowledged write is one for which a floret emitted a `ClientReply`, and that reply is a
-message like any other, so it lands in the trace with its timestamp — that is the set
-`lostwrites.go` checks against. Monotonic reads is asserted per client, so `ClientWrite` and
-`ClientRead` carry a `ClientID`; a client is a numbered request stream from the workload
-profile, and nothing more than that.
-
-An earlier draft left the second invariant citing "the mode's stated staleness
-bound" while no document stated one, which made `check/staleness.go`
-unwritable. The bounds above are that statement; [`design.md`](design.md)
-carries the reasoning.
+**Replicas converge.** After quiescence, no two florets hold different values
+for the same key. The third invariant used to ask whether two florets could
+both claim authority over a key, which is unviolatable here: the primary is
+chosen once and never moves, so authority is constant. Divergence is the
+failure this design can produce.
 
 Each violation is reported together with the seed that produced it, so any
 finding is independently reproducible by a third party.
+
+The parts of the read path that remain undecided, and what would settle each,
+are in [`design.md`](design.md).
 
 ## 7. Coverage of course topics
 
@@ -190,6 +205,11 @@ finding is independently reproducible by a third party.
 | Data | Versioned store, version vectors, conflict resolution |
 | Leaders, Followers, Time, Events | Primary and follower roles, logical clocks, event ordering |
 | Testing & Messaging | Invariant checking; replication message protocol |
+
+The caching row is worth reading precisely. The project does not implement a
+cache with a coherence protocol. A follower replica is readable directly and is
+therefore a cache with no bound, and what the work contributes is the
+measurement of how far behind it runs.
 
 ## 8. Deliverables
 
@@ -213,7 +233,7 @@ listed from the last thing cut to the first.
 - A Terraform-provisioned AWS environment — part of cut 2
 - A second runtime: real mode over TCP on EC2 — cut 2
 - Axis 3: the simulated curve validated against real hardware — cut 2
-- `diaspore watch`, the live terminal view — cut 1, the first to go
+- The live terminal view — cut 1, the first to go
 
 ## 9. Figures to be produced
 
@@ -227,9 +247,14 @@ listed from the last thing cut to the first.
 
 ### 10.1 Determinism leakage
 
-A single unguarded clock read, map iteration, or stray goroutine inside the core
-breaks replay silently. Mitigated by a test that executes the same seed twice
-and compares traces byte for byte, enforced in CI from week five onward.
+A single unguarded clock read, map iteration, or stray goroutine inside the
+core breaks replay silently. Mitigated by a test that executes the same seed
+twice and compares traces byte for byte, enforced in CI from week five onward.
+
+Comparing bytes rather than structures also puts the encoding under test. An
+encoder that walked a map in a different order on the second run would break
+replay exactly as thoroughly as the core doing it, and a structural comparison
+would pass.
 
 This is the load-bearing safeguard. If that test fails, no other result in the
 project can be trusted.
@@ -292,8 +317,8 @@ each names the component it actually corresponds to.
 - **Floret.** One individual flower within the head, each producing a single
   seed. Here, a node.
 - **Pappus.** The parachute that carries the seed. Here, the run manifest —
-  seed, cluster configuration, fault schedule, protocol version, and event trace
-  — serialised as one transferable file.
+  seed, cluster configuration, workload profile, fault schedule, protocol
+  version, and event trace — serialised as one transferable file.
 - **Dandelion.** The organism that releases thousands of diaspores at once, each
   landing independently. Here, the parallel sweep: many seeds scattered, and a
   report of which ones took root badly.
