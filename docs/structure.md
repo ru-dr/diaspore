@@ -194,6 +194,33 @@ only a scheduler.
 
 File extension: `.pappus`
 
+## Where each fact lives
+
+The same fact stated in two documents is a fact that can disagree with itself,
+and this set of documents spent several rounds doing exactly that. Each one
+now has a job, and a fact belongs to whichever job it answers.
+
+| Document | Owns |
+|---|---|
+| `README.md` | What the project is, the quick start, the command list |
+| `docs/overview.md` | The three scaling axes, what success looks like, the roadmap |
+| `docs/technical.md` | The apparatus: architecture, faults, invariants, deliverables, figures, schedule |
+| `docs/design.md` | Why it is built this way, and what is still undecided |
+| `docs/structure.md` | Package layout, import direction, this table |
+| `docs/naming.md` | The five terms, the identifiers, the names rejected |
+| `docs/plan.md` | The week-by-week schedule, the cut order, the risk table |
+| `docs/findings.md` | Seeds that broke invariants |
+
+Two documents carry a second copy on purpose. `technical.md` is submitted and
+has to stand alone, so it restates the invariants and the five names. The
+README is a front page and carries the command list a user needs without
+opening anything else. Both copies are compared by `scripts/check_docs.py`,
+which fails the build when they drift.
+
+Everything else is stated once and linked to. Adding a fact to a second
+document means adding it to that script as an owned table or a tracked claim,
+or not adding it.
+
 ## Note on a resolved drift
 
 An earlier version of this file had a `sim/` package holding the virtual clock, event queue,

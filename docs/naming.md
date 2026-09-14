@@ -68,19 +68,17 @@ Module path: `github.com/ru-dr/diaspore`
 
 ## Command line
 
-Verbs stay plain so the interface self-describes; nouns carry the theme.
+Verbs stay plain so the interface self-describes; nouns carry the theme. You
+run, you verify, you replay — and what you run against is a capitulum, what you
+replay is a pappus, and what scatters a thousand seeds is a dandelion.
 
-| Command | Function |
-|---|---|
-| `diaspore run --seed <n>` | One simulated run |
-| `diaspore dandelion --seeds <n>` | Sweep many seeds |
-| `diaspore pappus export --seed <n>` | Write a run manifest |
-| `diaspore pappus replay <file>` | Reproduce a run |
-| `diaspore verify <file>` | Check for violations |
-| `diaspore real --peers <list>` | Run over TCP |
-| `diaspore watch` | Live terminal view |
+The rule is that a reader who has never seen this file should still be able to
+work out what a command does. `diaspore dandelion --seeds 1000` passes that
+test; a verb taken from the same vocabulary would not.
 
 File extension: `.pappus`
+
+The commands themselves are listed in the [README](../README.md#cli).
 
 ## Names deliberately not used
 

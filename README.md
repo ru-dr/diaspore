@@ -104,32 +104,22 @@ Hunt bugs in simulation, then check whether the real world agrees.
 ## Determinism, and how it is protected
 
 One stray clock read, one map iteration, one goroutine inside the core, and replay breaks
-silently. A test runs the same seed twice and diffs the recorded traces byte for byte, in CI
-on every commit.
+silently — silently being the whole problem. A test runs the same seed twice and diffs the
+recorded traces byte for byte, in CI on every commit.
 
-Bytes rather than structures, deliberately — that puts the encoding under test too. An encoder
-that walked a map in a different order on the second run would break replay just as thoroughly
-as the core doing it, and a structural comparison would not notice.
-
-If that test goes red, nothing else in the repo can be trusted.
+If that test goes red, nothing else in the repo can be trusted. Why it compares bytes rather
+than structures, and what that costs, is in [`docs/design.md`](docs/design.md).
 
 ---
 
 ## Naming
 
-Every term comes from *Taraxacum*, the dandelion. Structures get botanical names; actions get
-plain verbs.
+Every term comes from *Taraxacum*, the dandelion — a capitulum holds florets, a pappus carries
+a seed, a dandelion scatters thousands at once. Structures get botanical names; actions get
+plain verbs, so the commands above read as English while the nouns carry the theme.
 
-| Term | In code |
-|---|---|
-| Diaspore | Project, module path, binary |
-| Capitulum | A cluster instance |
-| Floret | A single node |
-| Pappus | The portable run manifest |
-| Dandelion | The parallel sweep |
-
-Plurals are florets and capitula. Never capitulums. Full reference in
-[`docs/naming.md`](docs/naming.md).
+The five terms, what each corresponds to, and the ones deliberately rejected are in
+[`docs/naming.md`](docs/naming.md). Keep it open while writing code.
 
 ---
 
