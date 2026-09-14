@@ -78,10 +78,17 @@ becomes uneconomical.
 
 ## What success looks like
 
+These three are the result, and none of them depends on anything in the cut list.
+
 1. A violation found by the sweep replays byte-identically from its seed alone.
 2. Violation rate against cluster size is measured beyond the scale reachable on hardware.
 3. Sweep throughput is shown to scale with parallelism.
-4. At least one simulated finding is confirmed on a live cluster.
+
+One more, conditional on real mode surviving the schedule:
+
+4. At least one simulated finding is confirmed on a live cluster. This is axis 3, and axis 3 is
+   the second thing cut if the weeks run short — see the cut order in
+   [`plan.md`](plan.md). The simulated half is a complete result without it.
 
 ---
 
@@ -189,17 +196,21 @@ If that test goes red, nothing else in the repo can be trusted.
 Six faults, all scheduled by the seeded controller — so the fault timeline is part of what a
 seed determines.
 
-| Injected fault | Failure class | What it exercises |
-|---|---|---|
-| Node crash | Crash failure | Loss of a floret mid-operation |
-| Crash and restart | Fail-recover | Recovery with stale or absent state |
-| Message drop | Omission failure | Acknowledgements that never arrive |
-| Message delay | Timing failure | Correct responses arriving too late |
-| Message reorder | Timing failure | Causality assumptions in the protocol |
-| Network partition | Link failure | Minority isolation; the P in CAP |
+| Injected fault | Failure class | What it exercises | |
+|---|---|---|---|
+| Node crash | Crash failure | Loss of a floret mid-operation | core |
+| Crash and restart | Fail-recover | Recovery with stale or absent state | core |
+| Message drop | Omission failure | Acknowledgements that never arrive | core |
+| Network partition | Link failure | Minority isolation; the P in CAP | core |
+| Message delay | Timing failure | Correct responses arriving too late | additive |
+| Message reorder | Timing failure | Causality assumptions in the protocol | additive |
 
-Sustained delay under load additionally produces performance failure behaviour, where the
-capitulum responds but too slowly to be useful.
+The four marked *core* carry the argument on their own. Delay and reorder are the fourth item
+in the cut order, so the fault model has a floor of four and a ceiling of six.
+
+With delay present, sustained delay under load additionally produces performance failure
+behaviour, where the capitulum responds but too slowly to be useful. If delay is cut, that
+class goes with it and is not claimed.
 
 **Deliberately out of scope**, for reasons of design rather than time: Byzantine failure, which
 would need message signing and Byzantine-tolerant quorum arithmetic; response failure, which
@@ -214,7 +225,14 @@ include. These are stated boundaries of the fault model, not omissions.
 1. No acknowledged write is lost.
 2. No read returns a value older than a previously acknowledged write to the same key, beyond
    the mode's stated staleness bound.
-3. No key is concurrently owned by two florets claiming authority over it.
+3. After quiescence — every message delivered or dropped, no client traffic in flight — no two
+   florets hold different values for the same key.
+
+The third is convergence, not ownership. An earlier draft asked whether two florets could both
+claim authority over a key, which nothing here can do: the primary is static and there is no
+election, so authority never moves. Divergence is the failure this design can actually produce,
+through asynchronous fanout, a dropped replicate, a partition that heals, and whatever the
+conflict-resolution rule then decides.
 
 Each violation is reported with the seed that produced it, so any finding is independently
 reproducible by a third party.
@@ -233,7 +251,9 @@ SDKs are pointed at it unchanged. It replaced LocalStack Community, which began 
 tokens in March 2026.
 
 - Terraform plans and applies are validated locally before any cloud spend.
-- CI runs the infrastructure path against Floci, so the pipeline needs no cloud credentials.
+- CI runs the infrastructure path against Floci from the 11/30 week, when the Terraform and
+  the Floci compose file first exist. Before then CI is build, vet, test and the determinism
+  check. Either way the pipeline needs no cloud credentials.
 - EC2 time is spent only on the axis 3 validation runs.
 
 > **Caveat to verify before relying on this.** Floci's EC2 coverage is listed as partial. It is
@@ -281,19 +301,30 @@ the schedule tightens.
 
 ## Roadmap
 
+Split the way the plan's cut order splits it, so this list is not a promise the schedule
+already intends to break.
+
+**The project.** Not reducible — without these there is no result.
+
 - [ ] Event and message types defined
 - [ ] `core/` floret state machine, primary-backup mode
 - [ ] `capitulum/` simulated runtime with virtual clock
 - [ ] Same-seed determinism test in CI
-- [ ] Fault controller: all six faults
+- [ ] Fault controller: crash, crash-restart, drop, partition
 - [ ] `.pappus` manifest format
-- [ ] Quorum mode
-- [ ] Logical clocks
 - [ ] Invariant checker
 - [ ] `dandelion` parallel sweep
-- [ ] Terraform environment, validated against Floci
-- [ ] Real mode on EC2, simulated versus real comparison
+
+**Additive.** Each improves the result; each is droppable, in this order from the bottom up.
+
+- [ ] Version vectors — otherwise last-write-wins by timestamp
+- [ ] Message delay and reorder faults
+- [ ] Quorum mode — one mode demonstrates the idea
+- [ ] Terraform environment, real mode on EC2, simulated versus real comparison
 - [ ] `diaspore watch`
+
+Logical clocks are listed nowhere separately because they are a field on the trace record, not
+a milestone: the determinism test is ordered by the virtual clock and never waits on them.
 
 ---
 

@@ -14,18 +14,21 @@ diaspore/
 │   │   ├── real.go              diaspore real --peers
 │   │   └── watch.go             diaspore watch  (Bubble Tea terminal view)
 │   └── loadgen/
-│       └── main.go              Client workload driver for real mode
+│       └── main.go              Workload driver: HTTP in real mode, the same
+│                                 profile as seeded client events in simulation
 │
 ├── core/                        THE PURE LAYER — no I/O, no clocks, no goroutines
 │   ├── floret.go                Floret struct, Step(event) -> []Message
 │   ├── state.go                 Per-floret state: store, pending writes, peer view
 │   ├── event.go                 Event types: ClientWrite, ClientRead, MsgRecv, Timer
-│   ├── message.go               Wire messages: Replicate, Ack, Heartbeat
+│   ├── message.go               Wire messages: Replicate, Ack
 │   ├── store.go                 In-memory key-value map with versions
 │   ├── version.go               Version vectors, comparison, conflict resolution
 │   ├── mode_quorum.go           Quorum replication: majority ack before commit
-│   ├── mode_primary.go          Primary-backup: static primary, async fanout
-│   ├── clock.go                 Logical clock, incremented only by Step
+│   ├── mode_primary.go          Primary-backup: static primary, async fanout.
+│                                 No leases, no reassignment — see design.md
+│   ├── clock.go                 Logical clock, incremented only by Step. Payload
+│                                 in the trace, never its ordering key
 │   └── *_test.go                Unit tests per file
 │
 ├── capitulum/                   Deterministic runtime — owns florets, drives the event loop
@@ -34,7 +37,8 @@ diaspore/
 │   ├── queue.go                 Priority queue of scheduled events
 │   ├── faults.go                Fault controller: the six injected faults
 │   ├── rand.go                  The ONLY randomness source, seeded
-│   ├── trace.go                 Records every event with its logical timestamp
+│   ├── trace.go                 Records every event keyed by virtual time and
+│                                 sequence. Logical clock added as a field in 11/16
 │   └── determinism_test.go      Same seed twice, diff the traces  ← guards everything
 │
 ├── real/                        Live runtime
@@ -58,7 +62,7 @@ diaspore/
 │   ├── invariants.go            The three rules
 │   ├── lostwrites.go            Replay client log against final state
 │   ├── staleness.go             Measure how far behind a read was
-│   ├── ownership.go             No key owned by two florets at once
+│   ├── divergence.go            Replicas disagree on a key after quiescence
 │   └── report.go                Human-readable violation output
 │
 ├── infra/                       Terraform
@@ -91,7 +95,8 @@ diaspore/
 │   └── *.pappus                 Committed reproductions of known bugs
 │
 ├── .github/workflows/
-│   └── ci.yml                   Build, vet, test, determinism check, infra against Floci
+│   └── ci.yml                   Build, vet, test, determinism check. Infra path
+│                                 against Floci added in the 11/30 week
 │
 ├── Makefile                     dev, test, sweep, infra-up, infra-down
 ├── go.mod
@@ -114,10 +119,15 @@ one of those, the design is wrong.
 cmd/  ──▶  capitulum/  ──▶  core/
       ──▶  real/       ──▶  core/
       ──▶  dandelion/  ──▶  capitulum/
+                       ──▶  check/      ──▶  pappus/
       ──▶  check/      ──▶  pappus/
 ```
 
 Everything points inward. `core/` is the only package with no dependencies of its own.
+
+`dandelion/` imports `check/` because `report.go` says which seeds broke an
+invariant, which means running the checker over each sweep result. It is not
+only a scheduler.
 
 ## Key identifiers
 

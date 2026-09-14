@@ -46,9 +46,12 @@ before it are the runway that gets you to the first of them.
 
 ## Week of 10/05
 
-- [ ] `capitulum/trace.go` — record every event with its logical timestamp
+- [ ] `capitulum/trace.go` — record every event keyed by virtual time and a sequence number.
+      Not the logical clock: that is `core/clock.go` in 11/16, and the determinism test cannot
+      wait for it
 - [ ] **`capitulum/determinism_test.go`** — same seed twice, byte-diff the traces
-- [ ] `.github/workflows/ci.yml` and wire the determinism test into it
+- [ ] `.github/workflows/ci.yml` — build, vet, test, and the determinism test. The Floci infra
+      job comes in 11/30, when the Terraform exists
 - [ ] `capitulum/faults.go` — first fault: crash
 
 **Deliverable:** determinism proven and protected in CI. Do not let this slip past this week —
@@ -119,10 +122,14 @@ polish.
 
 Stated milestone: fault controller, logical clocks, both replication modes.
 
-- [ ] `core/clock.go` — logical clocks driven only by `Step`
+- [ ] `core/clock.go` — logical clocks driven only by `Step`, and add the value as a field on
+      the trace record. The trace stays ordered by virtual time; this is payload
 - [ ] `core/mode_quorum.go` — write commits only after majority ack
-- [ ] `core/mode_primary.go` — proper follower state, heartbeats, lease expiry
-- [ ] Document what happens when the static primary dies — that failure is a finding, not a bug
+- [ ] `core/mode_primary.go` — follower state and the acknowledgement path, finishing what
+      09/28 stubbed. No heartbeats and no leases: a lease implies the primary can be
+      reassigned, and there is no election in this design
+- [ ] Document what happens when the static primary dies — writes stop, and that failure is a
+      finding, not a bug
 
 **Deliverable:** both modes runnable under the same seed, with distinct failure classes.
 
@@ -133,7 +140,9 @@ Stated milestone: fault controller, logical clocks, both replication modes.
 Stated milestone: invariant checker, parallel sweep, first findings. This is the heart of the
 project.
 
-- [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `ownership.go`
+- [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `divergence.go` — the third
+      invariant is convergence after quiescence, not ownership: with a static primary and no
+      election, no key can ever have two claimants
 - [ ] `cmd/diaspore/verify.go`
 - [ ] `dandelion/sweep.go`, `worker.go`, `report.go`
 - [ ] `cmd/diaspore/dandelion.go`
@@ -152,6 +161,7 @@ measured.
 Stated milestone: Terraform environment, real mode on EC2, validation runs.
 
 - [ ] `deploy/floci-compose.yml`, `infra/floci.tfvars` — validate the infra path locally first
+- [ ] Extend `ci.yml` with the Floci infra job, now that there is Terraform to run against it
 - [ ] `infra/*.tf` — VPC, EC2 florets, security groups
 - [ ] `infra/user_data.sh` — bootstrap and start
 - [ ] `diaspore real --peers` against the live cluster at 3, 5 and 8 florets
@@ -189,13 +199,19 @@ Stated milestone: Terraform environment, real mode on EC2, validation runs.
 Cut in this order. Each cut leaves a project that still stands on its own.
 
 1. `diaspore watch` — presentation polish, and the static figures carry you
-2. Real mode on AWS, and axis 3 with it — the simulated half is a complete result
+2. Real mode on AWS, and axis 3 with it — the simulated half is a complete result. This also
+   takes success criterion 4 and the only consumer of `cmd/loadgen`'s HTTP path; the workload
+   profile still drives the simulator as seeded client events
 3. Quorum mode — one mode is enough to demonstrate the idea
-4. Message reorder and delay faults — crash and partition carry the point
+4. Message reorder and delay faults — crash, crash-restart, drop and partition carry the
+   point. This also takes the performance-failure class, which only delay produces
 5. Version vectors — last-write-wins by timestamp will do
 
 Never cut: the determinism test, the `.pappus` format, or the sweep. Those three *are* the
 project.
+
+This list is the authority. The roadmap in [`overview.md`](overview.md) is split along the
+same line, and nothing outside it should read as a promise.
 
 ---
 

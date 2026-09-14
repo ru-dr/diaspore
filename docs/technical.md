@@ -80,8 +80,9 @@ SDKs are pointed at it unchanged, which means the same infrastructure
 definitions are exercised locally and on real hardware.
 
 - Terraform plans and applies are validated locally before any cloud spend.
-- CI runs the infrastructure path against Floci, so the pipeline needs no cloud
-  credentials.
+- CI runs the infrastructure path against Floci from the week of Nov 30, when the
+  Terraform first exists. Before then CI is build, vet, test and the determinism
+  check. Either way the pipeline needs no cloud credentials.
 - EC2 time is spent only on the real-mode validation runs described in Axis 3
   of the proposal.
 
@@ -94,17 +95,22 @@ conventions are otherwise identical.
 Six faults are injected, all scheduled by the seeded controller — so the fault
 timeline is part of what a seed determines.
 
-| Injected fault | Failure class | What it exercises |
-|---|---|---|
-| Node crash | Crash failure | Loss of a floret mid-operation |
-| Crash and restart | Fail-recover | Recovery with stale or absent state |
-| Message drop | Omission failure | Acknowledgements that never arrive |
-| Message delay | Timing failure | Correct responses arriving too late |
-| Message reorder | Timing failure | Causality assumptions in the protocol |
-| Network partition | Link failure | Minority isolation; the P in CAP |
+| Injected fault | Failure class | What it exercises | |
+|---|---|---|---|
+| Node crash | Crash failure | Loss of a floret mid-operation | core |
+| Crash and restart | Fail-recover | Recovery with stale or absent state | core |
+| Message drop | Omission failure | Acknowledgements that never arrive | core |
+| Network partition | Link failure | Minority isolation; the P in CAP | core |
+| Message delay | Timing failure | Correct responses arriving too late | additive |
+| Message reorder | Timing failure | Causality assumptions in the protocol | additive |
 
-Sustained delay under load additionally produces **performance failure**
-behaviour, where the capitulum responds but too slowly to be useful.
+The four marked *core* carry the argument alone. Delay and reorder are the
+fourth item in the cut order, so the model has a floor of four and a ceiling of
+six.
+
+With delay present, sustained delay under load additionally produces
+**performance failure** behaviour, where the capitulum responds but too slowly
+to be useful. Cut delay and that class goes with it, and is not claimed.
 
 ### 5.1 Deliberately out of scope
 
@@ -126,7 +132,12 @@ Excluding them is a stated boundary of the fault model, not an omission.
 - No acknowledged write is lost.
 - No read returns a value older than a previously acknowledged write to the same
   key, beyond the mode's stated staleness bound.
-- No key is concurrently owned by two nodes claiming authority over it.
+- After quiescence, no two florets hold different values for the same key.
+
+The third is convergence rather than ownership. With a static primary and no
+election, authority never moves, so no key can have two claimants; divergence
+through asynchronous fanout, a dropped replicate and a healed partition is the
+failure this design can actually produce.
 
 Each violation is reported together with the seed that produced it, so any
 finding is independently reproducible by a third party.
