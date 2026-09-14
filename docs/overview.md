@@ -46,8 +46,16 @@ That one constraint lets the same code run two ways.
 Time advances only when the queue advances, so a thirty-second scenario executes in
 milliseconds. The only randomness source is seeded.
 
+Client load is part of that. In simulation nothing outside the seeded controller may generate
+a request: `capitulum/workload.go` expands a workload profile into `ClientWrite` and
+`ClientRead` events on the virtual clock, drawing from the one seeded source. A load generator
+with its own clock or its own randomness would be a determinism leak in the least affordable
+place, so there is not one. The profile is stored in the `.pappus` manifest, because a run
+that cannot be rebuilt from the manifest is not reproducible.
+
 **Real** — a goroutine per floret, TCP transport with framing and timeouts, real timers, and an
-HTTP key-value API. Faults are injected in-process through admin endpoints rather than by
+HTTP key-value API. `cmd/loadgen` replays the same profile over HTTP here, where a real clock
+is the point. Faults are injected in-process through admin endpoints rather than by
 manipulating the network, which keeps injected partitions deterministic and repeatable.
 
 So you hunt bugs in simulation, then check whether the real world agrees.
@@ -193,8 +201,8 @@ If that test goes red, nothing else in the repo can be trusted.
 
 ## Faults injected
 
-Six faults, all scheduled by the seeded controller — so the fault timeline is part of what a
-seed determines.
+Four core faults and two additive, all scheduled by the seeded controller — so the fault
+timeline is part of what a seed determines.
 
 | Injected fault | Failure class | What it exercises | |
 |---|---|---|---|
@@ -223,10 +231,20 @@ include. These are stated boundaries of the fault model, not omissions.
 ## Invariants checked
 
 1. No acknowledged write is lost.
-2. No read returns a value older than a previously acknowledged write to the same key, beyond
-   the mode's stated staleness bound.
+2. Reads respect the bound their mode states:
+   - **Quorum** — reads go through a majority read quorum, so the bound is **zero**. Any write
+     that was acknowledged is visible to every read that follows it. A stale read at all is a
+     violation.
+   - **Primary-backup** — a read served by the primary has a bound of **zero**. A read served
+     by a follower has **no bound**, and none is claimed: follower staleness is measured and
+     reported, not asserted. What is asserted for followers is **monotonic reads** — one
+     client reading one key from one floret never sees the value go backwards.
 3. After quiescence — every message delivered or dropped, no client traffic in flight — no two
    florets hold different values for the same key.
+
+Invariant 2 used to say "beyond the mode's stated staleness bound" while no document stated
+one, which left `check/staleness.go` unwritable. The bounds above are the statement;
+[`design.md`](design.md) carries the reasoning.
 
 The third is convergence, not ownership. An earlier draft asked whether two florets could both
 claim authority over a key, which nothing here can do: the primary is static and there is no

@@ -36,7 +36,7 @@ Plurals are *florets* and *capitula*. Never *capitulums*.
 |---|---|
 | `core/` | `Floret` and its state machine |
 | `capitulum/` | Owns florets, drives the event loop |
-| `pappus/` | Run manifest: read, write, validate |
+| `pappus/` | Run manifest: schema, trace, workload profile, read, write, validate |
 | `dandelion/` | Parallel seed execution |
 | `check/` | Invariant checking |
 | `real/` | Live runtime over TCP |
@@ -57,8 +57,12 @@ Module path: `github.com/ru-dr/diaspore`
 | `(c *Capitulum) Kill(id FloretID)` | Inject a crash |
 | `(c *Capitulum) Sever(a, b FloretID)` | Inject a partition |
 | `capitulum.New(n int, seed uint64)` | Construct a cluster |
-| `pappus.Write(c *Capitulum, path string)` | Export a run |
+| `(c *Capitulum) Pappus() pappus.Pappus` | Build the manifest for this run |
+| `pappus.Write(p Pappus, path string)` | Export a run |
 | `pappus.Read(path string)` | Load a run |
+| `type pappus.Profile struct` | Workload definition: expanded by capitulum, replayed by loadgen |
+| `type pappus.Trace struct` | The serialised event log the checker reads |
+| `check.Run(t pappus.Trace) []Violation` | Check a trace, with no runtime in scope |
 | `dandelion.Sweep(seeds, workers int)` | Run the sweep |
 
 ## Command line

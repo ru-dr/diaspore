@@ -13,7 +13,9 @@ before it are the runway that gets you to the first of them.
 
 ## Week of 09/14
 
-- [ ] `docs/design.md`: the event model, the invariants, the two modes and their exact ack rules
+- [ ] `docs/design.md`: the event model, the invariants, the two modes and their exact ack
+      rules, and the staleness bound per mode — `check/staleness.go` cannot be written until
+      this file names one
 - [ ] `docs/naming.md`: the naming reference, committed so it stops drifting
 - [ ] `go mod init github.com/ru-dr/diaspore`, package skeleton, `Makefile`, README
 - [ ] `deploy/Dockerfile` and `docker-compose.yml`
@@ -25,6 +27,8 @@ before it are the runway that gets you to the first of them.
 ## Week of 09/21
 
 - [ ] `core/event.go`, `core/message.go` — types only, no logic
+- [ ] `pappus/profile.go` — the workload profile type. It is needed before anything can
+      generate a client request, and it belongs to the manifest
 - [ ] `core/floret.go` — the `Step(event) -> []Message` signature, stubbed
 - [ ] `core/store.go` — in-memory versioned key-value map
 - [ ] Freeze the message envelope format
@@ -38,6 +42,8 @@ before it are the runway that gets you to the first of them.
 - [ ] `capitulum/queue.go`, `capitulum/clock.go` — priority queue and virtual clock
 - [ ] `capitulum/capitulum.go` — `New(n, seed)`, `Step() bool`, `Florets()`
 - [ ] `capitulum/rand.go` — the single seeded randomness source
+- [ ] `capitulum/workload.go` — expand a `pappus.Profile` into client events on the virtual
+      clock. Nothing outside the seeded controller may generate a request
 - [ ] `core/mode_primary.go` — primary-backup, ack immediately, fanout after
 
 **Deliverable:** one simulated run advances through events on a virtual clock.
@@ -46,9 +52,11 @@ before it are the runway that gets you to the first of them.
 
 ## Week of 10/05
 
-- [ ] `capitulum/trace.go` — record every event keyed by virtual time and a sequence number.
-      Not the logical clock: that is `core/clock.go` in 11/16, and the determinism test cannot
-      wait for it
+- [ ] `pappus/trace.go` — the `Trace` and `TraceRecord` types. They live here, not in
+      `capitulum/`, so that `check/` never has to import a runtime
+- [ ] `capitulum/trace.go` — the recorder: append to a `pappus.Trace`, keyed by virtual time
+      and a sequence number. Not the logical clock: that is `core/clock.go` in 11/16, and the
+      determinism test cannot wait for it
 - [ ] **`capitulum/determinism_test.go`** — same seed twice, byte-diff the traces
 - [ ] `.github/workflows/ci.yml` — build, vet, test, and the determinism test. The Floci infra
       job comes in 11/30, when the Terraform exists
@@ -111,7 +119,8 @@ above held, this is already done and this week buys you slack — use it on the 
 polish.
 
 - [ ] `core/version.go` — version vectors, comparison, conflict resolution
-- [ ] `pappus/write.go`, `pappus/read.go` — export and load a run
+- [ ] `pappus/write.go`, `pappus/read.go` — export and load a run. `Write` takes the
+      manifest, not a `*Capitulum`: `pappus/` must not learn what a runtime is
 - [ ] `cmd/diaspore/pappus.go` — `pappus export` and `pappus replay`
 
 **Deliverable:** hand a `.pappus` file to another machine and get the identical run.
@@ -140,9 +149,10 @@ Stated milestone: fault controller, logical clocks, both replication modes.
 Stated milestone: invariant checker, parallel sweep, first findings. This is the heart of the
 project.
 
-- [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `divergence.go` — the third
-      invariant is convergence after quiescence, not ownership: with a static primary and no
-      election, no key can ever have two claimants
+- [ ] `check/invariants.go`, `lostwrites.go`, `staleness.go`, `divergence.go` — reading a
+      `pappus.Trace` and nothing else. The third invariant is convergence after quiescence,
+      not ownership: with a static primary and no election, no key can ever have two
+      claimants. `staleness.go` checks against the per-mode bound design.md states
 - [ ] `cmd/diaspore/verify.go`
 - [ ] `dandelion/sweep.go`, `worker.go`, `report.go`
 - [ ] `cmd/diaspore/dandelion.go`

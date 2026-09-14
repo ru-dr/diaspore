@@ -33,7 +33,7 @@ Everything it does is expressed as `Step(event) → []Message`.
 
 ### 2.2 Two runtimes
 
-- `sim/` — a single goroutine driving a priority queue of events against a
+- `capitulum/` — a single goroutine driving a priority queue of events against a
   virtual clock. Time advances only when the queue advances, so a thirty-second
   scenario executes in milliseconds. The only randomness source in the package
   is seeded.
@@ -43,6 +43,13 @@ Everything it does is expressed as `Step(event) → []Message`.
   partitions deterministic and repeatable.
 
 Both import `core/`. Neither imports the other.
+
+Client load belongs to the deterministic side too. In simulation,
+`capitulum/workload.go` expands a workload profile into client events on the
+virtual clock using the one seeded randomness source; nothing else may generate
+a request. `cmd/loadgen` replays the same profile over HTTP against the real
+runtime. The profile is part of the manifest, because a run that cannot be
+rebuilt from the manifest is not reproducible.
 
 ### 2.3 The portable unit
 
@@ -92,8 +99,8 @@ conventions are otherwise identical.
 
 ## 5. Faults injected
 
-Six faults are injected, all scheduled by the seeded controller — so the fault
-timeline is part of what a seed determines.
+Four core faults and two additive are injected, all scheduled by the seeded
+controller — so the fault timeline is part of what a seed determines.
 
 | Injected fault | Failure class | What it exercises | |
 |---|---|---|---|
@@ -130,14 +137,23 @@ Excluding them is a stated boundary of the fault model, not an omission.
 ## 6. Invariants checked
 
 - No acknowledged write is lost.
-- No read returns a value older than a previously acknowledged write to the same
-  key, beyond the mode's stated staleness bound.
+- Reads respect the bound their mode states. **Quorum** reads go through a
+  majority read quorum, so the bound is zero and any stale read is a violation.
+  **Primary-backup** reads from the primary have a bound of zero; follower
+  reads have no bound and none is claimed, so follower staleness is measured
+  rather than asserted, and what is asserted instead is **monotonic reads** —
+  one client, one key, one floret, never going backwards.
 - After quiescence, no two florets hold different values for the same key.
 
 The third is convergence rather than ownership. With a static primary and no
 election, authority never moves, so no key can have two claimants; divergence
 through asynchronous fanout, a dropped replicate and a healed partition is the
 failure this design can actually produce.
+
+An earlier draft left the second invariant citing "the mode's stated staleness
+bound" while no document stated one, which made `check/staleness.go`
+unwritable. The bounds above are that statement; [`design.md`](design.md)
+carries the reasoning.
 
 Each violation is reported together with the seed that produced it, so any
 finding is independently reproducible by a third party.
@@ -152,22 +168,31 @@ finding is independently reproducible by a third party.
 | Consensus | Quorum acknowledgement rules and commit conditions |
 | Service API | HTTP key-value interface; CLI surface |
 | Load Testing & Threads | Client workload driver; sweep throughput scaling |
-| Caching | Digest caching in the replication path |
+| Caching | Follower replicas as a read cache; the staleness bound is its coherence condition |
 | Data | Versioned store, version vectors, conflict resolution |
-| Leaders, Followers, Time, Events | Primary and follower roles, logical clocks, leases |
+| Leaders, Followers, Time, Events | Primary and follower roles, logical clocks, event ordering |
 | Testing & Messaging | Invariant checking; replication message protocol |
 
 ## 8. Deliverables
 
-- A Go implementation with a pure replication core and two runtimes
+Split the way the cut order in [`plan.md`](plan.md) splits everything else.
+
+**Not reducible.**
+
+- A Go implementation with a pure replication core
 - A deterministic simulator with a seeded fault controller
 - A portable run format, and a replay command reproducing any run
 - An invariant checker reporting violations with reproducing seeds
 - A parallel sweep capable of executing thousands of scenarios
-- Terraform-provisioned AWS environment and a CI pipeline that enforces
-  determinism on every commit
-- Measured results along all three scalability axes
+- A CI pipeline that enforces determinism on every commit
+- Measured results along axes 1 and 2
 - A set of committed reproductions of discovered failures
+
+**Conditional on the schedule.** Each is in the cut order and may not ship.
+
+- The second replication mode, and with it two runtimes rather than one
+- A Terraform-provisioned AWS environment
+- Axis 3: the simulated curve validated against real hardware
 
 ## 9. Figures to be produced
 
@@ -195,10 +220,15 @@ behaviour and curve shape rather than absolute latency figures.
 
 ### 10.3 Scope
 
-The simulated half constitutes a complete result on its own. If the schedule
-slips, the reduction order is: real-mode validation, then the second replication
-mode, then message reordering and delay faults. The determinism test, the
-portable run format, and the sweep are not reducible — they are the project.
+The simulated half constitutes a complete result on its own.
+
+The cut order lives in [`plan.md`](plan.md) and nowhere else, so there is one
+list to keep true rather than three that drift. It runs `diaspore watch`, then
+real mode and axis 3, then quorum mode, then the delay and reorder faults, then
+version vectors — five items, each leaving a project that still stands.
+
+The determinism test, the portable run format, and the sweep are not reducible.
+They are the project.
 
 ## 11. Schedule
 

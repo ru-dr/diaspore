@@ -14,8 +14,9 @@ diaspore/
 │   │   ├── real.go              diaspore real --peers
 │   │   └── watch.go             diaspore watch  (Bubble Tea terminal view)
 │   └── loadgen/
-│       └── main.go              Workload driver: HTTP in real mode, the same
-│                                 profile as seeded client events in simulation
+│       └── main.go              Replays a pappus.Profile over HTTP against real mode.
+│                                 In simulation the same profile is expanded by
+│                                 capitulum/workload.go — one definition, two drivers
 │
 ├── core/                        THE PURE LAYER — no I/O, no clocks, no goroutines
 │   ├── floret.go                Floret struct, Step(event) -> []Message
@@ -37,8 +38,10 @@ diaspore/
 │   ├── queue.go                 Priority queue of scheduled events
 │   ├── faults.go                Fault controller: the six injected faults
 │   ├── rand.go                  The ONLY randomness source, seeded
-│   ├── trace.go                 Records every event keyed by virtual time and
-│                                 sequence. Logical clock added as a field in 11/16
+│   ├── workload.go              Expands a pappus.Profile into ClientWrite and ClientRead
+│                                 events on the virtual clock, drawing from rand.go
+│   ├── trace.go                 Recorder: appends to a pappus.Trace, keyed by virtual
+│                                 time and sequence. Logical clock added as a field in 11/16
 │   └── determinism_test.go      Same seed twice, diff the traces  ← guards everything
 │
 ├── real/                        Live runtime
@@ -48,8 +51,13 @@ diaspore/
 │   ├── api.go                   HTTP key-value API for clients
 │   └── admin.go                 In-process fault injection endpoints
 │
-├── pappus/                      The portable unit
-│   ├── format.go                Manifest schema: seed, config, fault schedule, version, trace
+├── pappus/                      The portable unit. Imports core/ and nothing else
+│   ├── format.go                Manifest schema: seed, config, workload profile, fault
+│   │                            schedule, protocol version, trace
+│   ├── trace.go                 Trace and TraceRecord types — the serialised event log
+│   ├── profile.go               Workload profile: key space, read/write ratio, arrival
+│   │                            rate, client count. Part of the manifest, because a run
+│   │                            is not reproducible without it
 │   ├── write.go                 Serialize a run to .pappus
 │   └── read.go                  Load and validate a .pappus
 │
@@ -61,7 +69,7 @@ diaspore/
 ├── check/                       Invariant checking
 │   ├── invariants.go            The three rules
 │   ├── lostwrites.go            Replay client log against final state
-│   ├── staleness.go             Measure how far behind a read was
+│   ├── staleness.go             Staleness against the bound design.md states per mode
 │   ├── divergence.go            Replicas disagree on a key after quiescence
 │   └── report.go                Human-readable violation output
 │
@@ -116,14 +124,28 @@ one of those, the design is wrong.
 ## Import direction
 
 ```
-cmd/  ──▶  capitulum/  ──▶  core/
-      ──▶  real/       ──▶  core/
-      ──▶  dandelion/  ──▶  capitulum/
-                       ──▶  check/      ──▶  pappus/
-      ──▶  check/      ──▶  pappus/
+core/        ◀── nothing. The pure layer
+pappus/      ──▶ core/
+capitulum/   ──▶ core/, pappus/
+real/        ──▶ core/, pappus/
+check/       ──▶ core/, pappus/
+dandelion/   ──▶ capitulum/, check/
+cmd/         ──▶ any of the above
 ```
 
-Everything points inward. `core/` is the only package with no dependencies of its own.
+Everything points inward. `core/` is the only package with no dependencies of
+its own, and `pappus/` is the only other package `check/` is allowed to know
+about.
+
+`check/` reads a `pappus.Trace`, never a live `Capitulum`. That is deliberate:
+`check/` is on the never-cut list and the simulator is not, so the checker must
+not depend on a runtime. It is also why the trace type lives in `pappus/` —
+the manifest is what gets handed to another machine, and the checker runs
+against exactly that.
+
+For the same reason `pappus.Write` takes the manifest, not a `*Capitulum`.
+`capitulum/` builds one and hands it over; `pappus/` never learns what a
+runtime is.
 
 `dandelion/` imports `check/` because `report.go` says which seeds broke an
 invariant, which means running the checker over each sweep result. It is not
@@ -143,8 +165,11 @@ only a scheduler.
 | `(c *Capitulum) Kill(id FloretID)` | Inject a crash |
 | `(c *Capitulum) Sever(a, b FloretID)` | Inject a partition |
 | `capitulum.New(n int, seed uint64)` | Construct a cluster |
-| `pappus.Write(c *Capitulum, path string)` | Export a run |
+| `(c *Capitulum) Pappus() pappus.Pappus` | Build the manifest for this run |
+| `pappus.Write(p Pappus, path string)` | Export a run |
 | `pappus.Read(path string)` | Load a run |
+| `type pappus.Profile struct` | Workload definition, expanded by capitulum, replayed by loadgen |
+| `check.Run(t pappus.Trace) []Violation` | Check a trace, with no runtime in scope |
 | `dandelion.Sweep(seeds, workers int)` | Run the sweep |
 
 File extension: `.pappus`
