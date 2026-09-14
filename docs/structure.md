@@ -196,9 +196,8 @@ File extension: `.pappus`
 
 ## Where each fact lives
 
-The same fact stated in two documents is a fact that can disagree with itself,
-and this set of documents spent several rounds doing exactly that. Each one
-now has a job, and a fact belongs to whichever job it answers.
+Each document has a job, and a fact belongs to whichever job it answers. The
+same fact stated in two places is a fact that can disagree with itself.
 
 | Document | Owns |
 |---|---|
@@ -215,15 +214,8 @@ Two documents carry a second copy on purpose. `technical.md` is submitted and
 has to stand alone, so it restates the invariants and the five names. The
 README is a front page and carries the command list a user needs without
 opening anything else. Both copies are compared by `scripts/check_docs.py`,
-which fails the build when they drift.
+which fails the build if they stop matching.
 
 Everything else is stated once and linked to. Adding a fact to a second
 document means adding it to that script as an owned table or a tracked claim,
 or not adding it.
-
-## Note on a resolved drift
-
-An earlier version of this file had a `sim/` package holding the virtual clock, event queue,
-fault controller and seeded randomness. The naming reference assigns that role to
-`capitulum/`, which also owns floret membership. This file now follows the naming reference.
-If any code or doc still says `sim/`, it is stale.

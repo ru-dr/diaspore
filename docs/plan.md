@@ -20,7 +20,7 @@ before it are the runway that gets you to the first of them.
       envelope freezes at the end of next week: whether the addressed floret coordinates a
       quorum or answers locally decides which messages exist, and nothing after 09/21 can add
       to them
-- [ ] `docs/naming.md`: the naming reference, committed so it stops drifting
+- [ ] `docs/naming.md`: the naming reference, committed before any code uses the terms
 - [ ] `go mod init github.com/ru-dr/diaspore`, package skeleton, `Makefile`, README
 - [ ] `deploy/Dockerfile` and `docker-compose.yml`
 

@@ -162,9 +162,3 @@ MIT — see [LICENSE](LICENSE).
 <div align="center">
 <sub>Built for CS 6650 (Building Scalable Distributed Systems) at Northeastern University, Fall 2026.</sub>
 </div>
-
----
-
-<sub>The documents are checked against each other on every push:
-<code>python3 scripts/check_docs.py</code>. Each rule in it exists because that
-drift happened once.</sub>

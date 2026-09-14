@@ -15,10 +15,8 @@ Why this is a scalability project, what would count as success, and what is left
 
 ---
 
-This file holds the argument and nothing else. What the system is and how it works is in
-[`technical.md`](technical.md); why it is built that way is in [`design.md`](design.md). Those
-facts are stated once, there, and are not repeated here — a claim in two places is a claim
-that can disagree with itself, and this project has spent enough on that already.
+This file holds the argument. What the system is and how it works is in
+[`technical.md`](technical.md); why it is built that way is in [`design.md`](design.md).
 
 ---
 

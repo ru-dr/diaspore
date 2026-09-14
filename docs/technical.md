@@ -292,8 +292,7 @@ behaviour and curve shape rather than absolute latency figures.
 
 The simulated half constitutes a complete result on its own.
 
-The cut order lives in [`plan.md`](plan.md) and nowhere else, so there is one
-list to keep true rather than three that drift. Five items, each leaving a
+The cut order lives in [`plan.md`](plan.md). Five items, each leaving a
 project that still stands.
 
 The determinism test, the portable run format, and the sweep are not reducible.
