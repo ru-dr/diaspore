@@ -1,18 +1,44 @@
 # Findings
 
-Seeds that broke an invariant, and why.
+Seeds that broke a checker, and why.
 
-Nothing here yet. The sweep that fills this file does not exist until late
-November, and inventing entries before then would be worse than an empty page.
+---
 
-Every violation the sweep reports gets an entry: the seed, the mode and cluster
-size it ran under, which invariant broke, and — the part that takes the
-thinking — why. A seed and a stack trace are a bug report; the reason it
-happened is the finding.
+## Index
 
-Each entry is reproducible from this file alone, because the seed together with
-the committed run manifest is everything another machine needs to see the same
-execution.
-
-| Seed | Mode | Florets | Invariant | Why |
+| ID | Date | Checker | Seed | Status |
 |---|---|---|---|---|
+
+<!-- Status is one of: open, fixed, planted. -->
+
+---
+
+<!--
+Copy this block for each new finding, newest at the top.
+
+## F-001: Short title
+
+- **Date found:**
+- **Seed:**
+- **Pappus file:**
+- **Checker:**
+- **Faults active:**
+- **Config:**
+
+### What happened
+
+### Trace excerpt
+
+```
+```
+
+### Root cause
+
+### Fix
+
+### Verified
+
+- [ ] Replay reproduces the failure before the fix
+- [ ] Replay passes after the fix
+- [ ] A sweep over the same seed range is clean
+-->

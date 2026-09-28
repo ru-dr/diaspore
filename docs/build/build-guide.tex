@@ -1,0 +1,1154 @@
+\documentclass[11pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amssymb}
+\usepackage{framed}
+\usepackage{listings}
+\usepackage[hidelinks]{hyperref}
+
+\hypersetup{pdftitle={Diaspore Build Guide}, pdfauthor={Rudr}}
+
+\setcounter{secnumdepth}{1}
+\setcounter{tocdepth}{2}
+\setlength{\emergencystretch}{3em}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\lbl}[1]{\textbf{#1}\enspace}
+\newcommand{\when}[1]{\par\textit{Planned: #1}\par}
+
+\newlist{asks}{itemize}{1}
+\setlist[asks]{label=\textbf{?}, leftmargin=1.6em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\newlist{checks}{itemize}{1}
+\setlist[checks]{label=$\square$, leftmargin=1.6em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\setlist[itemize]{label=$\bullet$, leftmargin=1.6em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\setlist[enumerate]{leftmargin=1.8em, itemsep=2pt, topsep=2pt, parsep=0pt}
+
+\newenvironment{milestone}[1]{\begin{framed}\noindent\textbf{#1}\par}{\end{framed}}
+\newenvironment{tipbox}[1]{\begin{framed}\noindent\textbf{#1}\par}{\end{framed}}
+
+\lstdefinestyle{json}{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framesep=4pt,
+  xleftmargin=4pt,
+  xrightmargin=4pt,
+  showstringspaces=false
+}
+
+\title{\textbf{Diaspore Build Guide}\\[0.3em]\large Checkpoints from September 23 to December 14, 2026}
+\author{Rudr}
+\date{Version 0.1, September 23, 2026}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\newpage
+
+\section{How to use this guide}
+
+This guide splits Diaspore into small checkpoints. Each one teaches one idea and ends with working, tested code.
+
+Every checkpoint has the same shape:
+
+\begin{itemize}
+  \item \lbl{Goal} What works at the end.
+  \item \lbl{Why} What breaks without it.
+  \item \lbl{Learn} The one new idea, in plain words.
+  \item \lbl{Decide first} Questions to answer on paper before coding.
+  \item \lbl{Tests first} Behaviors to write tests for before writing the code.
+  \item \lbl{Done when} How you know it is time to move on.
+  \item \lbl{Go you will meet} Packages and features you will likely use.
+\end{itemize}
+
+The rules:
+
+\begin{enumerate}
+  \item One checkpoint at a time. Do not start the next one until every ``Done when'' box is checked.
+  \item Write your ``Decide first'' answers in the decisions log (Section~\ref{sec:log}) before coding.
+  \item Tests before code, every time.
+  \item No function signatures are given. Designing your own types is part of the learning.
+  \item If you read someone else's code for an idea, close it before writing yours. Then write yours from memory.
+\end{enumerate}
+
+\begin{tipbox}{When you are stuck}
+\begin{enumerate}
+  \item Name the data shape in one plain sentence.
+  \item Write the concrete, repetitive version first, even if it looks clumsy.
+  \item Replace the parts that change with a variable.
+  \item Draw it: a memory diagram of what exists before and after one step.
+\end{enumerate}
+\end{tipbox}
+
+\section{What Diaspore is}
+
+Diaspore is a deterministic simulator for distributed systems. It is written in Go and ships as one binary.
+
+Nodes are separate programs, written in any language. They talk to Diaspore through JSON lines on stdin and stdout. SDKs are optional helpers, not requirements.
+
+Diaspore owns time, the network, crashes, and randomness, all driven by one seed. It sends one event to one node at a time and waits for the reply. That is what makes every run repeat exactly.
+
+When a rule breaks, Diaspore saves a \code{.pappus} file. Anyone can replay it and see the same bug.
+
+The commands are \code{diaspore run}, \code{diaspore dandelion}, \code{diaspore replay}, and \code{diaspore check-determinism}.
+
+\lbl{Honest pitch} ``A small, open, language-agnostic take on FoundationDB-style simulation, inspired by FoundationDB, TigerBeetle, and Maelstrom.'' Never ``the first.''
+
+\section{Scope}
+
+\subsection{Must-have: the course version}
+
+\begin{itemize}
+  \item Core: event loop, virtual time, one seed, and a trace hash.
+  \item Protocol v1, written as a spec with JSON Schema files.
+  \item A lockstep process driver with a watchdog.
+  \item Timers, storage, and crash with restart.
+  \item Faults: delay, drop, duplicate, crash, and partition.
+  \item Workload and history, plus two checkers: acked writes and linearizability.
+  \item A raw Go key-value example node with one planted bug.
+  \item One tiny raw node in another language.
+  \item CLI: \code{run}, \code{dandelion} across all cores, \code{replay}, and \code{check-determinism}.
+  \item The \code{.pappus} v1 format.
+  \item Scaling measurements for the report.
+\end{itemize}
+
+\subsection{Bonus, in this order}
+
+\begin{enumerate}
+  \item \code{dandelion} across machines.
+  \item An HTML timeline viewer.
+  \item A GitHub Action.
+  \item A Go SDK helper.
+\end{enumerate}
+
+\subsection{Not now}
+
+Python SDK, a real production runtime, disk faults, clock skew, shrinking failing runs, and binary encodings like protobuf.
+
+\subsection{After the course: new failure classes}
+
+These fit the building-block design, so you or the community can add them after v0.1.
+
+\begin{itemize}
+  \item \textbf{Gray failure} means a floret is degraded but still looks healthy. Diaspore would create the conditions, like a slow floret, a flaky link, or a one-way partition, and the checkers would catch the damage.
+  \item \textbf{Response failure} means a floret returns wrong values or makes an invalid state change. Diaspore would change a reply in transit, or hand back corrupted stored state on restart.
+  \item \textbf{Byzantine failure} means a floret lies, or tells different peers different things. Diaspore would change a floret's messages differently for each recipient. Realistic lies need knowledge of the message format, so this suits community plugins.
+\end{itemize}
+
+In every case the seed decides the change, so runs stay deterministic. Tolerating Byzantine faults, with signing and special quorums, is the tested system's job, not Diaspore's.
+
+\section{Calendar}
+
+Assumptions:
+
+\begin{itemize}
+  \item About 8 to 10 hours a week go to Diaspore. Each checkpoint is sized for 2 to 4 hours.
+  \item Course work is due Mondays at 9am Vancouver time, so keep Sundays for assignments.
+  \item Thanksgiving is Thursday, November 26. That week is planned light.
+  \item The semester ends December 14. Confirm the exact final project due date and presentation date on the syllabus.
+\end{itemize}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}l l l X l@{}}
+\toprule
+\textbf{Week} & \textbf{Dates} & \textbf{Phase} & \textbf{Checkpoints} & \textbf{Milestone} \\
+\midrule
+1  & Sep 23--27     & Ground     & CP0                  & \\
+2  & Sep 28--Oct 4  & Core       & CP1--CP3             & \\
+3  & Oct 5--11      & Core       & CP4--CP6             & A: Oct 11 \\
+4  & Oct 12--18     & Protocol   & CP7--CP9             & \\
+5  & Oct 19--25     & Protocol   & CP10--CP12           & B: Oct 25, Gate 1 \\
+6  & Oct 26--Nov 1  & First bug  & CP13--CP14           & \\
+7  & Nov 2--8       & First bug  & CP15--CP16           & \\
+8  & Nov 9--15      & First bug  & CP17--CP19           & C: Nov 15 \\
+9  & Nov 16--22     & Finish     & CP20--CP21           & \\
+10 & Nov 23--29     & Finish     & CP22--CP23 (light week) & D: Nov 29, Gate 2 \\
+11 & Nov 30--Dec 6  & Bonus      & B1, then B2          & \\
+12 & Dec 7--13      & Wrap-up    & Report, demo, buffer & Ends Dec 14 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\lbl{Gate 1, Sunday, October 25} If Milestone B is not working, drop every bonus item. Keep going on must-haves only.
+
+\lbl{Gate 2, Sunday, November 29} If Milestone D is not done, skip the bonus week. Use it to finish the must-haves.
+
+\section{Phase 0: Ground}
+
+\subsection{CP0: A repo that tests itself}
+\when{September 23 to 27}
+
+\lbl{Goal} An empty Go project where every push runs the tests.
+
+\lbl{Why} Without it, you find broken code days later.
+
+\lbl{Learn} CI, short for continuous integration, literally means a server that runs your checks on every push.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What are the module path and the repo name?
+  \item Apache-2.0 or MIT? Apache-2.0 adds a patent grant. Both are common for developer tools.
+  \item Read the repository layout in \code{docs/design.md}. Can you say what each folder is for, in one sentence each?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item One trivial test that passes.
+  \item One test you break on purpose, to watch CI fail.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item CI goes red on a broken test and green after the fix.
+  \item CI runs on Linux, macOS, and Windows.
+  \item The README has the one-line pitch.
+\end{checks}
+
+\lbl{Go you will meet} \code{go mod}, \code{go test}, \code{go vet}, and a GitHub Actions workflow file.
+
+\section{Phase 1: The deterministic core}
+
+Everything in this phase runs inside one Go process. There is no JSON and no child process yet.
+
+One rule holds for the whole phase: no goroutines and no real clock in the core.
+
+\subsection{CP1: Virtual clock}
+\when{Week of September 28}
+
+\lbl{Goal} A clock that moves only when the simulator moves it.
+
+\lbl{Why} Real time is different on every run, so replays could never match.
+
+\lbl{Learn} Virtual time literally means time is just a number the simulator owns. Ten simulated minutes can pass in one real second.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Say the clock's data shape in one sentence.
+  \item Milliseconds or microseconds? A plain integer or a duration type? Write down why.
+  \item Who may move the clock? What happens if someone tries to move it backward?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item The clock starts at zero.
+  \item Moving forward works.
+  \item Moving backward is refused.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+  \item Nothing in the package reads the real clock.
+\end{checks}
+
+\lbl{Go you will meet} \code{time.Duration}, \code{int64}, and the \code{errors} package.
+
+\subsection{CP2: Event queue}
+\when{Week of September 28}
+
+\lbl{Goal} A queue that always hands back the earliest event.
+
+\lbl{Why} Events are created out of order, but they must happen in time order.
+
+\lbl{Learn} A priority queue literally means a line where the most urgent item always comes out first. Here, most urgent means earliest.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What does every event need to carry? Say it in one sentence.
+  \item Two events at the same time: which goes first? Why must that answer never depend on luck?
+  \item Values or pointers in the queue? Draw both in memory before choosing.
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item Events come out in time order.
+  \item Same-time events come out in the order they were added.
+  \item Taking from an empty queue behaves the way you decided.
+  \item 10,000 inserts made from a fixed seed come out sorted.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+  \item You can draw the heap after five inserts, by hand.
+\end{checks}
+
+\lbl{Go you will meet} \code{container/heap}.
+
+\subsection{CP3: One seed, many streams}
+\when{Week of September 28}
+
+\lbl{Goal} Every random choice in a run comes from one seed.
+
+\lbl{Why} One stray random call anywhere breaks replay.
+
+\lbl{Learn} A PRNG, or pseudo-random number generator, literally means a formula that makes numbers look random but repeats exactly from the same seed.
+
+\lbl{Decide first}
+\begin{asks}
+  \item One generator for everything, or one child stream per purpose, like network, faults, workload, and each node?
+  \item If you add a new fault type later, should every old seed's network delays change? Let your answer pick the design.
+  \item How do you turn the master seed plus a name like ``network'' into a child seed, the same way on every machine?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item The same seed gives the same first 1,000 numbers.
+  \item Different seeds give different numbers.
+  \item Adding a new child stream does not change the existing ones.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+  \item No global random functions are used anywhere. Check with grep.
+\end{checks}
+
+\lbl{Go you will meet} \code{math/rand/v2}, whose PCG generator takes explicit seeds, and \code{hash/fnv}.
+
+\subsection{CP4: The loop}
+\when{Week of October 5}
+
+\lbl{Goal} A loop that takes the next event, runs its handler, and repeats until the run ends.
+
+\lbl{Why} This is the heart of Diaspore. Everything else plugs into it.
+
+\lbl{Learn} A discrete-event simulation literally means jumping from one event straight to the next, skipping the empty time between them.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What does a handler receive, and what may it do? Can it call another node directly, or only schedule events?
+  \item When does a run stop? List every reason.
+  \item Where do test nodes live for now?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item Two fake nodes play ping-pong ten times.
+  \item The final virtual time equals the sum of the delays you set.
+  \item Scheduling an event in the past is refused.
+  \item The run stops at its time limit.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+  \item The loop has no goroutines.
+\end{checks}
+
+\subsection{CP5: Trace and hash}
+\when{Week of October 5}
+
+\lbl{Goal} Every run writes a trace, and the trace gets a fingerprint.
+
+\lbl{Why} You need proof that two runs were exactly the same.
+
+\lbl{Learn} A hash literally means a short fingerprint of some data. Change one byte and the fingerprint changes.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What goes in one trace line? Enough to debug, and nothing more.
+  \item Will the same event always turn into the same bytes? Think about map key order and number formatting.
+  \item Hash while writing, or after the run?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item The same seed twice gives the same hash.
+  \item Changing one delay changes the hash.
+  \item Every trace line parses back.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item The ping-pong test also checks the hash.
+\end{checks}
+
+\lbl{Go you will meet} \code{encoding/json}, \code{crypto/sha256}, \code{io.MultiWriter}, and \code{bufio}.
+
+\subsection{CP6: Simulated network}
+\when{Week of October 5}
+
+\lbl{Goal} Messages between nodes travel through Diaspore with a seeded delay.
+
+\lbl{Why} The network causes most distributed bugs, so Diaspore must control it.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What does the network hold? Say it in one sentence.
+  \item Where does the delay range come from for now?
+  \item Random delays already let messages overtake each other. Do you still need a separate reorder fault? Write your answer in the log.
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item Every message arrives inside its delay range.
+  \item The same seed gives the same arrival times.
+  \item With a wide delay range, some messages overtake others.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item Ping-pong runs over the simulated network.
+\end{checks}
+
+\begin{milestone}{Milestone A --- Sunday, October 11: Deterministic core}
+\begin{checks}
+  \item Ping-pong runs over the simulated network.
+  \item The same seed gives the same hash, every time.
+  \item The core has no goroutines and no real clock.
+  \item Optional: draft blog post 1, on why distributed bugs are hard to replay.
+\end{checks}
+\end{milestone}
+
+\section{Phase 2: Real processes and the protocol}
+
+Now nodes become real programs. The protocol is the product, so it gets written down first.
+
+\subsection{CP7: Protocol spec v1}
+\when{Week of October 12}
+
+\lbl{Goal} A written spec that someone could implement without asking you anything.
+
+\lbl{Why} SDKs are optional, so the spec is what people build against.
+
+\lbl{Learn} JSON Schema literally means a JSON file that describes what valid JSON looks like.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Start from the draft in Appendix~\ref{app:protocol}. What would you change?
+  \item How does a node learn the protocol version? What happens on a mismatch?
+  \item Which reply fields are required? What should a node do with an event type it does not know?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item The schema accepts every example in Appendix~\ref{app:protocol}.
+  \item The schema rejects five broken examples that you write.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item \code{PROTOCOL.md} and the schema files are in the repo.
+\end{checks}
+
+\lbl{Go you will meet} A JSON Schema validator library for your tests, if you want one.
+
+\subsection{CP8: Talking to one process}
+\when{Week of October 12}
+
+\lbl{Goal} Start a node program, send it \code{init}, and read its reply.
+
+\lbl{Why} Nodes are separate programs, so Diaspore drives them through pipes.
+
+\lbl{Learn} A pipe literally means a one-way stream of bytes between two programs. A program reads from its stdin and writes to its stdout.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Who owns the process and its pipes? What gets closed, and when?
+  \item How do you read exactly one JSON line? What if a line is very long?
+  \item Where do node logs go, so stdout stays clean for the protocol?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A tiny raw test node, written in Go with no SDK, answers \code{init}.
+  \item A node that prints garbage gives a clear error.
+  \item A node that exits early gives a clear error.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass on all three operating systems in CI.
+\end{checks}
+
+\lbl{Go you will meet} \code{os/exec}, \code{bufio.Scanner} (note its default line limit of 64 KB), \code{bufio.Writer} with \code{Flush}, and \code{encoding/json}.
+
+\subsection{CP9: Lockstep driver}
+\when{Week of October 12}
+
+\lbl{Goal} Send one event, wait for its reply, apply it, and repeat.
+
+\lbl{Why} Without lockstep, processes race each other and runs stop matching.
+
+\lbl{Learn} Lockstep literally means moving one step at a time, together, never ahead.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What happens to the \code{send} list in a reply? Say it in one sentence.
+  \item A reply has sends, timers, and storage. Does the order you apply them in matter?
+  \item How long does the watchdog wait in real time? What does a timeout mean for the run?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item Three test nodes pass a message around a ring.
+  \item Twenty runs of one seed give one hash.
+  \item A node that never replies trips the watchdog with a clear message.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+  \item The watchdog can stop a run, but it never changes the run's results.
+\end{checks}
+
+\lbl{Go you will meet} Goroutines and \code{select}, but only in the process driver, never in the loop. Also \code{context.WithTimeout}.
+
+\subsection{CP10: Timers}
+\when{Week of October 19}
+
+\lbl{Goal} Nodes can set and cancel timers.
+
+\lbl{Why} Heartbeats, retries, and election timeouts all need timers.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Setting a timer whose id already exists: replace it, or refuse?
+  \item Canceling a timer that already fired: ignore it, or refuse?
+  \item A timer and a message at the same instant: which goes first? Your CP2 tie-break should answer this.
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A timer fires exactly at the current time plus its delay.
+  \item Canceling stops it from firing.
+  \item Setting it again moves it.
+  \item A node with a 100 ms heartbeat, run for one second, sends the number of heartbeats you predicted on paper.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+\end{checks}
+
+\subsection{CP11: Storage, crash, and restart}
+\when{Week of October 19}
+
+\lbl{Goal} Nodes can save state that survives a crash.
+
+\lbl{Why} Many real bugs appear only after a crash and a restart.
+
+\lbl{Learn} Durable literally means it survives a crash. Memory does not.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What does Diaspore keep for each node's storage? One sentence.
+  \item Does \code{store} merge keys, or replace everything?
+  \item On a crash, what happens to messages already on their way to that node? To its timers?
+  \item On restart, start a fresh process or reuse the old one? Which is more honest?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A counter node crashes, restarts, and continues from its stored value.
+  \item Messages and timers behave the way you decided.
+  \item Crash and restart show up in the trace.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+\end{checks}
+
+\subsection{CP12: check-determinism}
+\when{Week of October 19}
+
+\lbl{Goal} A command that runs one seed twice and compares the results.
+
+\lbl{Why} In any language, a node can break determinism by accident. This catches it.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Report only ``different,'' or point to the first line that differs? Which helps more?
+  \item Which exit code means ``not deterministic''?
+  \item The \code{flag} package or a CLI library? Write down why.
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A well-behaved node passes.
+  \item A node that reads the real clock fails, and the report points at the first differing line.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item \code{diaspore check-determinism --seed 42} works on the ring test.
+\end{checks}
+
+\begin{milestone}{Milestone B --- Sunday, October 25: Real processes in lockstep (Gate 1)}
+\begin{checks}
+  \item Real node processes run in lockstep, with timers.
+  \item Crash and restart work, with storage.
+  \item \code{check-determinism} catches a bad node.
+  \item Publish blog post 1.
+\end{checks}
+If this is not working, drop every bonus item now.
+\end{milestone}
+
+\section{Phase 3: The first real bug}
+
+By the end of this phase, a sweep finds the planted bug and a \code{.pappus} file replays it every time.
+
+\subsection{CP13: Config file}
+\when{Week of October 26}
+
+\lbl{Goal} \code{diaspore.yaml} describes a whole run.
+
+\lbl{Why} Runs must be shareable and repeatable without long command lines.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Which fields are required, and what are the defaults?
+  \item How do you report a bad field so the user can fix it fast?
+  \item Which YAML library? Check that it is still maintained before picking.
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item The example in Appendix~\ref{app:files} loads.
+  \item Unknown fields are rejected.
+  \item A bad duration like ``5 seconds'' is rejected with a clear message.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+  \item \code{diaspore run} reads everything it needs from the file.
+\end{checks}
+
+\subsection{CP14: Faults: delay, drop, and duplicate}
+\when{Week of October 26}
+
+\lbl{Goal} Rules from the config change what the network does.
+
+\lbl{Why} Bugs hide behind unlucky delivery, so Diaspore must create that bad luck on purpose.
+
+\lbl{Learn} A fault rule literally means three things: which messages, what goes wrong, and how often.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Say a rule's shape in one sentence.
+  \item If two rules match one message, do both apply? In what fixed order?
+  \item Which random stream do faults draw from?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item Drop with chance 1 drops every matching message. Chance 0 drops none.
+  \item Duplicate delivers a message twice.
+  \item Rules touch only the messages they match.
+  \item The same seed gives the same drops.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item Every fault shows up in the trace, along with the rule that caused it.
+\end{checks}
+
+\subsection{CP15: Crash schedule and partitions}
+\when{Week of November 2}
+
+\lbl{Goal} Crash nodes on a seeded schedule, and split the network into groups.
+
+\lbl{Why} Crashes and partitions are where replication bugs live.
+
+\lbl{Learn} A network partition literally means some nodes cannot reach others for a while.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Say a partition's shape in one sentence.
+  \item Messages that cross a partition: dropped, or held until it heals?
+  \item How are crash and partition times picked from the seed?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item During a partition, no message crosses between groups.
+  \item After it heals, messages flow again.
+  \item The same seed gives the same schedule.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item All tests pass.
+\end{checks}
+
+\subsection{CP16: Workload and history}
+\when{Week of November 2}
+
+\lbl{Goal} Virtual clients send key-value requests and record what happened.
+
+\lbl{Why} Checkers can only judge what was recorded.
+
+\lbl{Learn} A history literally means the list of what every client asked, what it got back, and when.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What is one history entry? One sentence.
+  \item When does a client give up waiting, and what do you record then? A timed-out write may or may not have happened.
+  \item How do clients pick keys and values from the seed?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item There is one history entry per request.
+  \item Timeouts are recorded as unknown, not as failed.
+  \item The same seed gives the same history.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item \code{history.jsonl} is written for every run.
+\end{checks}
+
+\subsection{CP17: Example key-value node with a planted bug}
+\when{Week of November 9}
+
+\lbl{Goal} A small replicated key-value node in Go, speaking raw JSON with no SDK.
+
+\lbl{Why} Diaspore needs a real target, and a known bug proves the tool works.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Describe the replication design in three sentences.
+  \item Pick the planted bug. Choose one that only shows up under a crash plus unlucky timing.
+  \item How does each node know which one is the primary?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item With no faults, every write can be read back.
+  \item The node passes \code{check-determinism}.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item Fault-free runs are clean.
+\end{checks}
+
+\subsection{CP18: Checker: acked writes are never lost}
+\when{Week of November 9}
+
+\lbl{Goal} A checker that catches the planted bug.
+
+\lbl{Why} Without a rule to check, a broken run looks like any other run.
+
+\lbl{Learn} An invariant literally means a rule that must always stay true.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Write the rule in one exact sentence.
+  \item How do unknown outcomes count?
+  \item Check once at the end of the run, or after every read?
+\end{asks}
+
+\lbl{Tests first} Use hand-written histories:
+\begin{checks}
+  \item A clean history passes.
+  \item A history with a lost acked write fails.
+  \item A history with an unknown write does not fail by mistake.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item Clean runs pass, and the planted bug fails.
+\end{checks}
+
+\subsection{CP19: .pappus, replay, and the first sweep}
+\when{Week of November 9}
+
+\lbl{Goal} Sweep seeds until the bug appears, save it, and replay it.
+
+\lbl{Why} This is the whole promise of Diaspore, working end to end.
+
+\lbl{Decide first}
+\begin{asks}
+  \item What must a \code{.pappus} file hold to stand alone? Start from Appendix~\ref{app:files}.
+  \item If the node program changed since the file was made: warn, or refuse?
+  \item Should a sweep stop at the first failure, or collect all of them?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item Writing and then reading a \code{.pappus} file gives back the same content.
+  \item Replay gives the same trace hash as the original run.
+  \item Replay warns when the node program changed.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item \code{diaspore dandelion --seeds 1-500} finds the bug.
+  \item \code{diaspore replay} shows it every time.
+\end{checks}
+
+\begin{milestone}{Milestone C --- Sunday, November 15: The first bug, end to end}
+\begin{checks}
+  \item A sweep finds the planted bug.
+  \item The \code{.pappus} file replays it with the same hash.
+  \item Record a short demo: sweep, failure, replay.
+  \item Optional: blog post 2, on finding the first bug.
+\end{checks}
+\end{milestone}
+
+\section{Phase 4: Finish the must-haves}
+
+\subsection{CP20: Parallel dandelion and scaling numbers}
+\when{Week of November 16}
+
+\lbl{Goal} Run many seeds at once across CPU cores, and measure how it scales.
+
+\lbl{Why} This is the scalability half of the course story.
+
+\lbl{Learn} Scaling up literally means using more of one machine. Scaling out means using more machines, which is bonus B1.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Parallelism lives between seeds, never inside one run. Why?
+  \item How many workers? How are results collected? How do all workers stop at the first failure?
+  \item What will you measure? At least: seeds per second against worker count, events per second per run, and time spent waiting on node processes.
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A parallel sweep finds the same failing seeds as a serial sweep.
+  \item Results do not depend on the number of workers.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item You have a chart of seeds per second for 1, 2, 4, and 8 workers.
+\end{checks}
+
+\lbl{Go you will meet} Goroutines, channels, \code{sync.WaitGroup}, context cancellation, and \code{runtime.NumCPU}.
+
+\subsection{CP21: Linearizability checker with Porcupine}
+\when{Week of November 16}
+
+\lbl{Goal} A stronger checker for the key-value store.
+
+\lbl{Why} ``No lost writes'' misses bugs like stale reads.
+
+\lbl{Learn} Linearizability literally means every operation looks like it happened at a single instant between its start and its end, as if there were only one copy of the data.
+
+\lbl{Decide first}
+\begin{asks}
+  \item Read Porcupine's README first. How will you describe the key-value store as a model?
+  \item How do unknown outcomes map onto that model?
+  \item Check all keys together, or one key at a time?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A hand-made valid history passes.
+  \item A history with a stale read fails.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item The checker can be turned on by name in \code{diaspore.yaml}.
+\end{checks}
+
+\lbl{Go you will meet} \code{github.com/anishathalye/porcupine}.
+
+\subsection{CP22: One tiny raw node in another language}
+\when{Week of November 23 (light week)}
+
+\lbl{Goal} Prove ``any language'' with a small node written outside Go.
+
+\lbl{Why} Without it, the honest wording is only ``designed for any language.''
+
+\lbl{Decide first}
+\begin{asks}
+  \item JavaScript or Python?
+  \item What are that language's determinism traps? Python randomizes string hashing per process. JavaScript's \code{Math.random} cannot be seeded.
+  \item How will Diaspore set up each node's environment to avoid those traps?
+\end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item The node passes \code{check-determinism}.
+  \item It runs in one cluster alongside Go nodes.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item A CI job runs the mixed-language cluster.
+\end{checks}
+
+\subsection{CP23: Docs and release v0.1.0}
+\when{Week of November 23 (light week)}
+
+\lbl{Goal} A stranger can install Diaspore and watch a bug replay within ten minutes.
+
+\lbl{Why} Open-source tools live or die by their first ten minutes.
+
+\lbl{Decide first}
+\begin{asks}
+  \item How do people install it: \code{go install}, release binaries, or both?
+  \item What goes in the README, and in what order?
+  \item Which honest comparison lines go in? Use Appendix~\ref{app:claims}.
+\end{asks}
+
+\lbl{Done when}
+\begin{checks}
+  \item A classmate follows the README with no help from you.
+  \item v0.1.0 is tagged, with binaries for Linux, macOS, and Windows.
+\end{checks}
+
+\lbl{Go you will meet} GoReleaser, if you choose release binaries.
+
+\begin{milestone}{Milestone D --- Sunday, November 29: Every must-have is done (Gate 2)}
+\begin{checks}
+  \item Every must-have works and is tested.
+  \item v0.1.0 is tagged.
+\end{checks}
+If this is not done, skip the bonus week.
+\end{milestone}
+
+\section{Phase 5: Bonus}
+\when{November 30 to December 6, only after Milestone D}
+
+Do these in order, and stop when the week ends.
+
+\subsection{B1: dandelion across machines}
+
+A coordinator hands out seed ranges to workers on several machines. This is the strongest scale-out story for the course.
+
+\begin{asks}
+  \item How do workers talk to the coordinator?
+  \item What happens when a worker dies in the middle of a range?
+  \item How do you make sure no seed runs twice, and none is skipped?
+\end{asks}
+
+\subsection{B2: HTML timeline viewer}
+
+One static HTML file that reads \code{trace.jsonl} and draws which node sent what, and when.
+
+\subsection{B3: GitHub Action}
+
+Runs a sweep on every pull request, fails the build when a rule breaks, and uploads the \code{.pappus} file.
+
+\subsection{B4: Go SDK helper}
+
+Only once the protocol has stopped changing.
+
+\section{Phase 6: Wrap-up}
+\when{December 7 to 13}
+
+Report outline:
+
+\begin{enumerate}
+  \item The problem: why distributed bugs do not replay.
+  \item The design: virtual time, one seed, lockstep, and the protocol.
+  \item Faults and checkers.
+  \item Results: the bug found, the scaling chart, and the cost of the process round trip.
+  \item Limits, stated honestly, plus future work on gray, response, and Byzantine failures.
+  \item Related work: FoundationDB, TigerBeetle's VOPR, Maelstrom, gosim, detsim, and Antithesis.
+\end{enumerate}
+
+Demo script: sweep, failure, \code{.pappus} file, replay, and the timeline if B2 exists.
+
+Also publish blog post 3, and keep two days as buffer.
+
+\clearpage
+\section{Decisions log}
+\label{sec:log}
+
+Write each ``Decide first'' answer here, with the reason. Future you will thank you.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{2.4}
+\begin{tabularx}{\linewidth}{|p{1.5cm}|p{1.2cm}|X|X|}
+\hline
+\textbf{Date} & \textbf{CP} & \textbf{Decision} & \textbf{Why} \\
+\hline
+Sep 23 & --- & Core in Go. Nodes in any language. SDKs optional. No Python SDK. & The protocol is the product. \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+ & & & \\
+\hline
+\end{tabularx}
+\end{center}
+
+\clearpage
+\section{Glossary}
+
+\begin{description}[leftmargin=0pt, itemsep=3pt, parsep=0pt]
+  \item[Checker] A program that reads a history and says whether a rule was broken.
+  \item[CI] Continuous integration: a server that runs your checks on every push.
+  \item[Determinism] The same inputs always give the same outputs.
+  \item[Discrete-event simulation] Jumping from one event to the next, skipping the empty time between.
+  \item[Durable] Survives a crash.
+  \item[Hash] A short fingerprint of some data.
+  \item[History] What every client asked, what it got back, and when.
+  \item[Invariant] A rule that must always stay true.
+  \item[Linearizability] Every operation looks like it happened at one instant between its start and its end.
+  \item[Lockstep] One step at a time, together, never ahead.
+  \item[Network partition] Some nodes cannot reach others for a while.
+  \item[.pappus] Diaspore's replay file: the seed, the setup, and the failure in one place.
+  \item[Pipe] A one-way stream of bytes between two programs.
+  \item[PRNG] A formula that makes numbers look random but repeats exactly from the same seed.
+  \item[Seed] The one number that decides every random choice in a run.
+  \item[Trace] The list of every event in a run.
+  \item[Virtual time] Time as a number the simulator owns.
+  \item[Watchdog] A real-time timer that stops a run if a node hangs.
+\end{description}
+
+\appendix
+
+\section{Protocol v1 draft}
+\label{app:protocol}
+
+This is the starting point for CP7, not the final spec. Each line is one JSON object, and every event gets exactly one reply.
+
+\subsection{Events: Diaspore to node}
+
+Start or restart:
+
+\begin{lstlisting}[style=json]
+{"type": "init", "node": "n1", "peers": ["n2", "n3"], "rand_seed": 918273, "time": 0, "stored": {}}
+\end{lstlisting}
+
+A message arrives:
+
+\begin{lstlisting}[style=json]
+{"type": "message", "time": 1250, "from": "n2", "body": {"op": "put", "key": "x", "value": 5}}
+\end{lstlisting}
+
+A timer fires:
+
+\begin{lstlisting}[style=json]
+{"type": "timer", "time": 1750, "id": "election"}
+\end{lstlisting}
+
+\subsection{Reply: node to Diaspore}
+
+\begin{lstlisting}[style=json]
+{"type": "done", "send": [{"to": "n2", "body": {"op": "ack"}}], "set_timers": [{"id": "election", "after": 500}], "cancel_timers": ["heartbeat"], "store": {"term": "3"}, "log": ["became leader"]}
+\end{lstlisting}
+
+\subsection{Rules every node must follow}
+
+\begin{itemize}
+  \item Do work only inside the handler for the current event.
+  \item Never read the real clock. Use the \code{time} field.
+  \item Never open your own network connections. Use \code{send}.
+  \item Never use unseeded randomness. Use \code{rand_seed}.
+  \item Keep anything that must survive a crash in \code{store}.
+\end{itemize}
+
+\subsection{Crashes and hung nodes}
+
+A crash kills the node process, so its memory is gone. A restart starts a new process and sends \code{init} with \code{stored} filled in.
+
+If a node does not reply, a real-time watchdog stops the run and reports it. The watchdog only detects hangs. It never affects the simulation.
+
+\clearpage
+\section{File drafts}
+\label{app:files}
+
+\subsection{diaspore.yaml}
+
+\begin{lstlisting}[style=json]
+version: 1
+nodes:
+  count: 3
+  command: ./kvnode
+workload:
+  type: kv
+  clients: 3
+  ops: 200
+faults:
+  - fault: delay
+    amount: 1ms-50ms
+  - fault: drop
+    chance: 0.02
+  - fault: crash
+    every: 5s-20s
+    restart_after: 1s-3s
+checkers:
+  - acked-writes
+run:
+  duration: 120s
+\end{lstlisting}
+
+\subsection{.pappus}
+
+\begin{lstlisting}[style=json]
+{
+  "pappus": 1,
+  "diaspore": "0.1.0",
+  "seed": 48213,
+  "config": {},
+  "nodes": {"kv": {"command": "./kvnode", "sha256": "..."}},
+  "trace_hash": "sha256:...",
+  "failure": {"checker": "acked-writes", "time": 83120, "reason": "write x=5 was acked, then lost after n1 crashed"}
+}
+\end{lstlisting}
+
+The \code{config} field holds the full resolved setup, so the file stands alone. The node hash warns you if the code changed since the bug was found.
+
+\section{Honest claims}
+\label{app:claims}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.4}
+\begin{tabularx}{\linewidth}{@{}X X@{}}
+\toprule
+\textbf{Do not say} & \textbf{Say instead} \\
+\midrule
+``The first DST tool for any language'' & ``Inspired by FoundationDB, TigerBeetle, and Maelstrom'' \\
+``Fully deterministic'' & ``Deterministic when nodes follow the protocol rules, checked by trace hashes'' \\
+``Supports any language'' (before CP22) & ``Designed for any language'' \\
+``Test any service'' & ``Test nodes written against the Diaspore protocol'' \\
+``Finds real production bugs'' & ``Found the bug planted in the example,'' until it truly finds others \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Before publishing, check two things: whether Maelstrom supports exact replay from a seed, and the current features of gosim and detsim.
+
+\end{document}
