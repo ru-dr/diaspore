@@ -8,7 +8,7 @@ func TestClockStartAtZero(t *testing.T) {
 	var now = simClock().Now()
 
 	if now != 0 {
-		t.Errorf("clock should start at 0, got %d", now)
+		t.Errorf("Now() = %d, want %d", now, 0)
 	}
 }
 
