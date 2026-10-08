@@ -47,7 +47,7 @@
 
 \title{\textbf{Diaspore Build Guide}\\[0.3em]\large Checkpoints from September 23 to December 14, 2026}
 \author{Rudr}
-\date{Version 0.1, September 23, 2026}
+\date{Version 0.1, revised October 7, 2026}
 
 \begin{document}
 
@@ -106,6 +106,56 @@ The commands are \code{diaspore run}, \code{diaspore dandelion}, \code{diaspore 
 
 \lbl{Honest pitch} ``A small, open, language-agnostic take on FoundationDB-style simulation, inspired by FoundationDB, TigerBeetle, and Maelstrom.'' Never ``the first.''
 
+\subsection{Real code, simulated world}
+
+Think of a flight simulator. The pilot is real, but the sky is simulated. Lessons from a simulated crash still hold, because the pilot makes the same decisions in a real plane.
+
+Diaspore works the same way. The bug lives in a system's logic, and that logic can run inside Diaspore even though the world around it is fake.
+
+Sans-I/O literally means ``without input and output.'' The core logic never touches the network or the clock directly. It is only handed events and answers them.
+
+Code built this way runs in Diaspore for testing and in production for real use. Only a thin layer differs: in production it talks to real sockets and clocks, and under Diaspore it talks JSON lines.
+
+etcd's Raft library is built this way. FoundationDB and TigerBeetle test their real production code like this too.
+
+The honest cost: a system must be built, or adapted, in this style first.
+
+\subsection{Where it is useful}
+
+\begin{itemize}
+  \item \textbf{Building replicated systems.} Leader election, replication, and consensus code hit bugs that need a crash plus bad timing. A sweep over thousands of seeds finds them.
+  \item \textbf{Bug reports.} Instead of ``it fails sometimes,'' a developer attaches a \code{.pappus} file. Anyone can replay the exact failure on their own machine.
+  \item \textbf{Regression tests in CI.} Once a bug is fixed, its \code{.pappus} file becomes a test that proves it stays fixed. Bonus B3 runs a sweep on every pull request.
+  \item \textbf{Learning distributed systems.} Students building Raft or a key-value store can see exactly why their code broke. Maelstrom already serves this group, so exact replay is the edge.
+\end{itemize}
+
+\subsection{What it can and cannot control}
+
+Diaspore controls what travels between nodes, and when things happen. It cannot control what happens inside the machine: threads, disk, memory, the kernel, or containers.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}X l l@{}}
+\toprule
+\textbf{Issue} & \textbf{v0.1, florets} & \textbf{v0.2, interception} \\
+\midrule
+A message arrives late or out of order & Yes & Yes \\
+A message is lost, or a partition cuts nodes off & Yes & Yes \\
+A message arrives twice & Yes & Yes \\
+A node crashes and restarts & Yes & Partly, since disk is real \\
+A timeout fires before a slow reply arrives & Yes & Yes \\
+Two nodes' clocks disagree & Not yet & Possible \\
+Two threads inside one node race each other & No & No \\
+A disk write is lost before it is saved & No & No \\
+Docker networking or DNS is misconfigured & No & No \\
+A node runs out of memory or CPU & No & No \\
+Real TCP or kernel behavior misbehaves & No & No \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Here v0.1 and v0.2 are Diaspore releases, not versions of this guide.
+
 \section{Scope}
 
 \subsection{Must-have: the course version}
@@ -131,6 +181,7 @@ The commands are \code{diaspore run}, \code{diaspore dandelion}, \code{diaspore 
   \item An HTML timeline viewer.
   \item A GitHub Action.
   \item A Go SDK helper.
+  \item etcd's Raft library, wrapped as a floret.
 \end{enumerate}
 
 \subsection{Not now}
@@ -148,6 +199,20 @@ These fit the building-block design, so you or the community can add them after 
 \end{itemize}
 
 In every case the seed decides the change, so runs stay deterministic. Tolerating Byzantine faults, with signing and special quorums, is the tested system's job, not Diaspore's.
+
+\subsection{After the course: interception mode}
+
+The long-term goal is for Diaspore to wrap unmodified programs, not only florets. Interception literally means catching a program's requests to the OS, like ``what time is it'' or ``send this packet,'' and answering them yourself.
+
+\begin{itemize}
+  \item Diaspore would answer every clock read, random number, and network call, so it dictates the program's whole environment.
+  \item It starts Linux only, with single-threaded programs.
+  \item Real programs ask questions in the middle of their work, so the event model needs a new kind of call: the program asks, and waits for Diaspore's answer.
+  \item Go programs skip the C library, so \code{LD_PRELOAD} tricks do not work on them.
+  \item Linux often answers clock reads without a real system call, so a simple interceptor never sees them.
+\end{itemize}
+
+This is why the loop talks to florets only through a small driver interface, decided in CP9. Interception becomes a second driver beside the process driver, and the core stays the same.
 
 \section{Calendar}
 
@@ -484,13 +549,14 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 
 \lbl{Why} Without lockstep, processes race each other and runs stop matching.
 
-\lbl{Learn} Lockstep literally means moving one step at a time, together, never ahead.
+\lbl{Learn} Lockstep literally means moving one step at a time, together, never ahead. A seam literally means a boundary where one piece can be swapped without touching the rest. In Go, a seam is usually an interface.
 
 \lbl{Decide first}
 \begin{asks}
   \item What happens to the \code{send} list in a reply? Say it in one sentence.
   \item A reply has sends, timers, and storage. Does the order you apply them in matter?
   \item How long does the watchdog wait in real time? What does a timeout mean for the run?
+  \item What is the smallest interface between the loop and a floret driver? Keep the process driver behind it, so a second driver, like interception, can be added later without changing the loop.
 \end{asks}
 
 \lbl{Tests first}
@@ -946,6 +1012,16 @@ Runs a sweep on every pull request, fails the build when a rule breaks, and uplo
 
 Only once the protocol has stopped changing.
 
+\subsection{B5: etcd Raft as a floret}
+
+A thin floret around etcd's Raft library. The library has no clock or network of its own, so its real logic runs under Diaspore unchanged. This is the first real, widely used code inside Diaspore.
+
+\begin{asks}
+  \item How do \code{init}, \code{message}, and \code{timer} events turn into Raft's \code{Tick} and \code{Step} calls?
+  \item What must go into \code{store} so a restarted node recovers correctly?
+  \item The library is well tested. If a sweep fails, is the bug in Raft or in your wrapper? How do you tell?
+\end{asks}
+
 \section{Phase 6: Wrap-up}
 \when{December 7 to 13}
 
@@ -956,7 +1032,7 @@ Report outline:
   \item The design: virtual time, one seed, lockstep, and the protocol.
   \item Faults and checkers.
   \item Results: the bug found, the scaling chart, and the cost of the process round trip.
-  \item Limits, stated honestly, plus future work on gray, response, and Byzantine failures.
+  \item Limits, stated honestly, plus future work on gray, response, and Byzantine failures, and on interception mode.
   \item Related work: FoundationDB, TigerBeetle's VOPR, Maelstrom, gosim, detsim, and Antithesis.
 \end{enumerate}
 
@@ -979,11 +1055,11 @@ Write each ``Decide first'' answer here, with the reason. Future you will thank 
 \hline
 Sep 23 & --- & Core in Go. Nodes in any language. SDKs optional. No Python SDK. & The protocol is the product. \\
 \hline
- & & & \\
+Oct 7 & --- & Keep the floret protocol for the course. Interception of unmodified programs comes after. & Full interception is years of work and Linux only. A working core comes first. \\
 \hline
- & & & \\
+Oct 7 & CP9 & The loop talks to florets only through a small driver interface. & So interception can be added later without changing the core. \\
 \hline
- & & & \\
+Oct 7 & --- & Add etcd Raft as a floret, as bonus B5. & Puts real, widely used code inside Diaspore. \\
 \hline
  & & & \\
 \hline
@@ -1023,13 +1099,17 @@ Sep 23 & --- & Core in Go. Nodes in any language. SDKs optional. No Python SDK. 
   \item[Durable] Survives a crash.
   \item[Hash] A short fingerprint of some data.
   \item[History] What every client asked, what it got back, and when.
+  \item[Interception] Catching a program's requests to the OS and answering them yourself.
   \item[Invariant] A rule that must always stay true.
   \item[Linearizability] Every operation looks like it happened at one instant between its start and its end.
   \item[Lockstep] One step at a time, together, never ahead.
   \item[Network partition] Some nodes cannot reach others for a while.
   \item[.pappus] Diaspore's replay file: the seed, the setup, and the failure in one place.
   \item[Pipe] A one-way stream of bytes between two programs.
+  \item[Raft] A set of rules for a group of servers to agree on one ordered list of changes, even when some crash.
   \item[PRNG] A formula that makes numbers look random but repeats exactly from the same seed.
+  \item[Sans-I/O] Core logic that never touches the network or clock directly, and is only handed events.
+  \item[Seam] A boundary where one piece can be swapped without touching the rest.
   \item[Seed] The one number that decides every random choice in a run.
   \item[Trace] The list of every event in a run.
   \item[Virtual time] Time as a number the simulator owns.
@@ -1145,6 +1225,9 @@ The \code{config} field holds the full resolved setup, so the file stands alone.
 ``Supports any language'' (before CP22) & ``Designed for any language'' \\
 ``Test any service'' & ``Test nodes written against the Diaspore protocol'' \\
 ``Finds real production bugs'' & ``Found the bug planted in the example,'' until it truly finds others \\
+``Works with real systems'' & ``Runs etcd's Raft library through a thin floret,'' only once B5 works \\
+``Wraps any program'' & ``Wrapping unmodified programs is future work'' \\
+``Tests real systems'' & ``Tests real logic written in sans-I/O style'' \\
 \bottomrule
 \end{tabularx}
 \end{center}
