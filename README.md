@@ -1,6 +1,6 @@
 <div align="center">
 
-# Diaspore
+<img src="docs/assets/banner.svg" alt="Diaspore" width="100%">
 
 **Seeds for failures.**
 
@@ -230,6 +230,7 @@ The full reference, including terms deliberately rejected, is in
 | [`docs/design.md`](docs/design.md) | The pieces, the event model, the decisions, and why |
 | [`docs/plan.md`](docs/plan.md) | Schedule, checkpoint tracker, milestones, and gates |
 | [`docs/naming.md`](docs/naming.md) | Naming reference, including terms deliberately rejected |
+| [`docs/brand-guide.md`](docs/brand-guide.md) | Logo, color, gradient, and usage rules, with all brand assets |
 
 Coming during the build: `PROTOCOL.md`, the full floret protocol, and `docs/findings.md`, the
 seeds that broke checkers and why.
