@@ -1,6 +1,10 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="Diaspore" width="100%">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/assets/banner-dark.svg">
+  <source media="(prefers-color-scheme: light)" srcset="docs/assets/banner.svg">
+  <img src="docs/assets/banner.svg" alt="Diaspore" width="100%">
+</picture>
 
 **Seeds for failures.**
 

@@ -36,14 +36,16 @@ Descriptor: **Deterministic simulation and failure search for distributed system
 
 | File | Use |
 |---|---|
-| [`banner.svg`](assets/banner.svg) | README header. Rounded corners, 1800×340, transparent outside the corners. |
-| [`logo-lockup.svg`](assets/logo-lockup.svg) | Mark plus wordmark on the brand gradient, 16:9. Slides, covers. |
-| [`logo-lockup-ink.svg`](assets/logo-lockup-ink.svg) | Lockup, transparent, dark ink. Light backgrounds. |
-| [`logo-lockup-light.svg`](assets/logo-lockup-light.svg) | Lockup, transparent, light ink. Dark backgrounds. |
-| [`mark.svg`](assets/mark.svg) | Mark on the brand gradient, square. |
-| [`mark-ink.svg`](assets/mark-ink.svg) | Mark only, transparent, dark ink. |
-| [`mark-light.svg`](assets/mark-light.svg) | Mark only, transparent, light ink. |
-| [`favicon.svg`](assets/favicon.svg) | Bold seed on a gradient tile for 16–64px: favicons, browser tabs. |
+| [`banner.svg`](assets/banner.svg) | README header for light themes. White rounded card with a faint border, 1800×340. |
+| [`banner-dark.svg`](assets/banner-dark.svg) | README header for dark themes. Near-black card, brighter seed, light wordmark. |
+| [`logo-lockup.svg`](assets/logo-lockup.svg) | Mark plus wordmark on white, 16:9. Slides, covers. |
+| [`logo-lockup-color.svg`](assets/logo-lockup-color.svg) | Lockup, transparent, color seed and dark wordmark. Light backgrounds. |
+| [`logo-lockup-color-dark.svg`](assets/logo-lockup-color-dark.svg) | Lockup, transparent, brighter seed and light wordmark. Dark backgrounds. |
+| [`logo-lockup-ink.svg`](assets/logo-lockup-ink.svg), [`logo-lockup-light.svg`](assets/logo-lockup-light.svg) | One-color lockups, dark or light. Print, stamps, anywhere color is not possible. |
+| [`mark.svg`](assets/mark.svg) | Color seed on white, square. |
+| [`mark-color.svg`](assets/mark-color.svg) | Color seed, transparent. |
+| [`mark-ink.svg`](assets/mark-ink.svg), [`mark-light.svg`](assets/mark-light.svg) | One-color seed, dark or light, transparent. |
+| [`favicon.svg`](assets/favicon.svg) | Bold color seed on a white tile for 16–64px: favicons, browser tabs. |
 | [`favicon-32.png`](assets/favicon-32.png), [`apple-touch-icon.png`](assets/apple-touch-icon.png) | 32px and 180px renders of the favicon. |
 | [`mark-small-ink.svg`](assets/mark-small-ink.svg), [`mark-small-light.svg`](assets/mark-small-light.svg) | Bold seed, transparent, for 16–32px where the standard mark's thin bars fade. |
 | [`seed.txt`](assets/seed.txt) | The seed in terminal characters, 38 columns by 25 rows. |
@@ -56,45 +58,34 @@ Edit the SVGs, not the PNGs. Regenerate PNGs with `rsvg-convert`:
 rsvg-convert -w 512  -o docs/assets/avatar.png docs/assets/mark.svg
 ```
 
-The wordmark is outlined paths, not live text. Do not retype it or swap the font.
+The wordmark is outlined paths, not live text, set in Milling Duplex 1mm (Milling Trial, 205TF). Do not retype it or swap the font. The font files are a trial release and are not in this repo.
 
 ## Color
 
-| Name | Hex | RGB | Use |
-|---|---|---|---|
-| Charcoal | `#1D1C1B` | 29, 28, 27 | Mark, wordmark, body text on light |
-| Chalk | `#F4F3F3` | 244, 243, 243 | Light surfaces, light ink on dark |
-| Green | `#60E21B` | 96, 226, 27 | The saturated accent, center of the gradient |
-| Orange | `#FABA17` | 250, 186, 23 | Gradient transition |
-| Peach | `#FFB592` | 255, 181, 146 | Gradient transition |
-| Pink | `#FFB0CD` | 255, 176, 205 | Gradient bottom |
+Neutral ground, color inside the seed. The background stays plain so the seed carries all the
+color.
 
-This palette is deliberately the same as TwelveLabs' published brand colors, taken from their
-brand page. The mark's bar style is inspired by theirs, the single-seed idea and the clock-tick meaning
-are Diaspore's own.
+| Name | Hex | Use |
+|---|---|---|
+| Ink | `#1A1A18` | Wordmark, one-color mark, body text on light |
+| White | `#FFFFFF` | Banner, lockup, and tile ground |
+| Paper | `#F5F4F0` | Light ink on dark, soft surfaces |
+| Border | `#E6E3DC` | The faint outline on white cards |
+| Seed green | `#5FD85A` | Top of the seed gradient |
+| Seed amber | `#EDB52B` | Middle of the seed gradient |
+| Seed coral | `#F26B5E` | Bottom of the seed gradient |
 
-Charcoal and Chalk do the work. Green, Orange, Peach, and Pink appear only inside the gradient.
-Do not use them as flat fills, button colors, or text colors.
+### The seed gradient
 
-### The gradient
+The seed is filled with one vertical gradient across its full height, from the top bar to the
+base bar: green at the head, amber through the stalk's middle, coral at the base. Stops are at
+0%, 45%, and 100%.
 
-Vertical, top to bottom. Stops are interpolated in OKLab, so the steps look even, and sampled
-below at each 10%:
-
-| Position | Color |
-|---|---|
-| 0% to 30% | `#F4F3F3` (Chalk) |
-| 40% | `#D3F0C9` |
-| 50% | `#8FE86F` |
-| 60% | `#60E21B` (Green) |
-| 70% | `#BCD019` |
-| 80% | `#FABA17` (Orange) |
-| 90% | `#FFB592` (Peach) |
-| 100% | `#FFB0CD` (Pink) |
-
-Chalk holds for the top 30%, eases into Green by 60%, then Orange at 80%, Peach at 90%, and Pink
-at the bottom. If the gradient is cropped or resized, stretch the whole thing to the new height.
-Do not cut off an end. The banner is the original 450px gradient squeezed into 340px this way.
+- On dark backgrounds use the brighter set: `#9CF27A`, `#FFE27A`, `#FF9E8A`.
+- The wordmark is never filled with the gradient. It is Ink on light and Paper on dark.
+- Do not put the colors on the background. A saturated band behind thin bars fights them.
+- The middle amber is deepened from a pure yellow so thin bars stay readable on white.
+- For one-color uses (print, stamps), use the Ink or Paper files.
 
 ## Logo
 
@@ -118,9 +109,10 @@ stalk one line.
 
 ### Which file where
 
-- Light background: `logo-lockup-ink.svg`, `mark-ink.svg`.
-- Dark background: `logo-lockup-light.svg`, `mark-light.svg`.
-- Photo or busy background: put the lockup on the gradient version, never directly on the image.
+- White or light background: `logo-lockup-color.svg`, `mark-color.svg`.
+- Dark background: `logo-lockup-color-dark.svg`.
+- One color only: `logo-lockup-ink.svg`, `mark-ink.svg` (dark), `*-light.svg` (light).
+- Photo or busy background: place the lockup on a white card, never directly on the image.
 
 ### Banner
 
@@ -128,6 +120,9 @@ stalk one line.
 - GitHub renders the README column about 888px wide. The 5.3:1 ratio keeps the banner near
   170px tall there.
 - Alignment follows the rule below.
+- The README switches banners by theme with a `<picture>` element: `banner-dark.svg` when the
+  viewer prefers dark, `banner.svg` otherwise. Keep the two files identical in layout so nothing
+  shifts when the theme changes.
 
 ### Alignment rule
 
@@ -152,10 +147,10 @@ two values, and tighter in-row gaps clog the center of the head.
 
 ### Don't
 
-- Don't recolor the mark or wordmark outside Charcoal and Chalk.
+- Don't recolor the wordmark outside Ink and Paper. The seed uses only the seed gradient, or one color in Ink or Paper.
 - Don't stretch, rotate, outline, or add shadows.
 - Don't thicken the wordmark.
-- Don't place the mark on a flat green, salmon, or red background.
+- Don't place the seed on a green, amber, or coral background. It disappears.
 - Don't rearrange the lockup, such as stacking text under the mark. Ask first if a layout needs it.
 - Don't redraw the mark's bars. The bar height, gap, and radius are what make it read as one object.
 
@@ -165,11 +160,11 @@ two values, and tighter in-row gaps clog the center of the head.
 per row of the mark, so it keeps the row grid. It is 38 columns by 25 rows, which is too tall for
 a routine header. Use it for `diaspore --version` and the first-run screen, and print only the
 name on ordinary commands. It must render in a plain terminal with no color. If color is used,
-it is Charcoal-on-default only, never the gradient colors as text.
+it is the terminal default color only, never the seed colors as text.
 
 ## Typography
 
-The wordmark carries the brand type. For everything else use a neutral grotesque sans such as
+The wordmark carries the brand type, Milling Duplex 1mm. For everything else use a neutral grotesque sans such as
 Inter, or the system sans-serif, and the system monospace for code. Keep headings in sentence
 case.
 
@@ -185,9 +180,9 @@ Plain, specific, a little dry. State what the tool does and what it does not do 
 
 | Place | Asset |
 |---|---|
-| README header | `banner.svg` |
+| README header | `banner.svg` and `banner-dark.svg`, switched with `<picture>` |
 | GitHub social preview | `social-preview.png` |
 | GitHub org or account avatar | `avatar.png` |
 | Slides, covers | `logo-lockup.svg` |
-| Docs on dark theme | `logo-lockup-light.svg` |
-| Print, one-color | `logo-lockup-ink.svg` |
+| Docs on dark theme | `logo-lockup-color-dark.svg` |
+| Print, one color | `logo-lockup-ink.svg` |
