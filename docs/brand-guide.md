@@ -134,7 +134,10 @@ One rule drives every asset, so the lockup looks the same everywhere:
 - **Horizontal:** centered halfway between the bounding-box center and the ink-weight center.
   The mark is sparse on its left, so a pure box-center looks left-heavy.
 - **Vertical:** the middle of the capital D sits on the canvas center line.
-- **Mark alone:** centered halfway between box center and ink-weight center on both axes.
+- **Mark alone, favicon, and avatar:** centered 70% on the bounding box and 30% on the
+  ink-weight center, on both axes. The seed's weight is in its head, so a pure box center looks
+  low and a full weight center looks high. The tile is sized so the seed fills about three
+  quarters of it, which leaves proportionate margins on all four sides.
 - **Transparent files** (`*-ink`, `*-light`) are cropped to the artwork with equal padding, so
   they are box-centered by construction. They keep the same wordmark offset.
 
