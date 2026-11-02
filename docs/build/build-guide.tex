@@ -45,9 +45,9 @@
   showstringspaces=false
 }
 
-\title{\textbf{Diaspore Build Guide}\\[0.3em]\large Checkpoints from September 23 to December 14, 2026}
-\author{Rudr}
-\date{Version 0.1, revised October 7, 2026}
+\title{\textbf{Diaspore Build Guide}\\[0.3em]\large Checkpoints from October 29 to December 14, 2026}
+\author{The Diaspore team}
+\date{Version 0.2, October 29, 2026}
 
 \begin{document}
 
@@ -76,8 +76,9 @@ Every checkpoint has the same shape:
 The rules:
 
 \begin{enumerate}
-  \item One checkpoint at a time. Do not start the next one until every ``Done when'' box is checked.
-  \item Write your ``Decide first'' answers in the decisions log (Section~\ref{sec:log}) before coding.
+  \item One checkpoint at a time for each person. Do not start your next one until every ``Done when'' box is checked on your current one.
+  \item Every checkpoint has one owner, named in the team guide. Someone else reviews the pull request.
+  \item Write your ``Decide first'' answers in the pull request description before coding. A bigger decision becomes an ADR in \code{docs/adr/}.
   \item Tests before code, every time.
   \item No function signatures are given. Designing your own types is part of the learning.
   \item If you read someone else's code for an idea, close it before writing yours. Then write yours from memory.
@@ -170,19 +171,21 @@ Here v0.1 and v0.2 are Diaspore releases, not versions of this guide.
   \item A raw Go key-value example node with one planted bug.
   \item One tiny raw node in another language.
   \item CLI: \code{run}, \code{dandelion} across all cores, \code{replay}, and \code{check-determinism}.
+  \item \code{dandelion} across machines: a coordinator hands out seed ranges to workers on other machines (CP24, formerly bonus B1).
   \item The \code{.pappus} v1 format.
-  \item Scaling measurements for the report.
+  \item Scaling measurements for the report, on one machine and across machines.
 \end{itemize}
 
 \subsection{Bonus, in this order}
 
-\begin{enumerate}
-  \item \code{dandelion} across machines.
-  \item An HTML timeline viewer.
-  \item A GitHub Action.
-  \item A Go SDK helper.
-  \item etcd's Raft library, wrapped as a floret.
-\end{enumerate}
+Bonus B1, \code{dandelion} across machines, moved into the must-haves as CP24. The other bonus items keep their numbers.
+
+\begin{itemize}
+  \item B2: An HTML timeline viewer.
+  \item B3: A GitHub Action.
+  \item B4: A Go SDK helper.
+  \item B5: etcd's Raft library, wrapped as a floret.
+\end{itemize}
 
 \subsection{Not now}
 
@@ -216,14 +219,34 @@ This is why the loop talks to florets only through a small driver interface, dec
 
 \section{Calendar}
 
+The team of four starts work on Thursday, October 29, 2026. This calendar begins that day and ends on December 14.
+
 Assumptions:
 
 \begin{itemize}
-  \item About 8 to 10 hours a week go to Diaspore. Each checkpoint is sized for 2 to 4 hours.
-  \item Course work is due Mondays at 9am Vancouver time, so keep Sundays for assignments.
+  \item Four people share the work. Each checkpoint is sized for 2 to 4 hours of one person. The plan assumes the team finishes four to five checkpoints a week. The hours per person are still open in the team guide.
+  \item CP0 is done, so CP1 is next.
+  \item Project deadlines use Vancouver time. The Vancouver clock stays at UTC-7 all year. Boston moves to EST on November 1. After that, Boston is two hours ahead, so 9am in Vancouver is 11am in Boston.
   \item Thanksgiving is Thursday, November 26. That week is planned light.
-  \item The semester ends December 14. Confirm the exact final project due date and presentation date on the syllabus.
+  \item The syllabus is tentative. Check Canvas and Piazza for changes.
 \end{itemize}
+
+\subsection{Deadlines}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}l X X@{}}
+\toprule
+\textbf{Due (Vancouver)} & \textbf{What} & \textbf{Notes} \\
+\midrule
+Mon Nov 23, 9am & Project Liftoff: Project Proposal and Team Charter & 11am Boston. Graded on on-time delivery and how actionable the plan is. \\
+Mon Dec 14, 9am & Final Project deliverables (20\%) & 11am Boston \\
+Mon Dec 14, 1--3pm & Final Project presentations & 3--5pm Boston \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection{Weeks}
 
 \begin{center}
 \small
@@ -231,30 +254,27 @@ Assumptions:
 \toprule
 \textbf{Week} & \textbf{Dates} & \textbf{Phase} & \textbf{Checkpoints} & \textbf{Milestone} \\
 \midrule
-1  & Sep 23--27     & Ground     & CP0                  & \\
-2  & Sep 28--Oct 4  & Core       & CP1--CP3             & \\
-3  & Oct 5--11      & Core       & CP4--CP6             & A: Oct 11 \\
-4  & Oct 12--18     & Protocol   & CP7--CP9             & \\
-5  & Oct 19--25     & Protocol   & CP10--CP12           & B: Oct 25, Gate 1 \\
-6  & Oct 26--Nov 1  & First bug  & CP13--CP14           & \\
-7  & Nov 2--8       & First bug  & CP15--CP16           & \\
-8  & Nov 9--15      & First bug  & CP17--CP19           & C: Nov 15 \\
-9  & Nov 16--22     & Finish     & CP20--CP21           & \\
-10 & Nov 23--29     & Finish     & CP22--CP23 (light week) & D: Nov 29, Gate 2 \\
-11 & Nov 30--Dec 6  & Bonus      & B1, then B2          & \\
-12 & Dec 7--13      & Wrap-up    & Report, demo, buffer & Ends Dec 14 \\
+1 & Oct 29--Nov 1 & Core & CP1, CP2, CP3, CP7, in parallel (4 days) & \\
+2 & Nov 2--8      & Core, then protocol & CP4--CP6, CP8, CP9 & A: Nov 8 \\
+3 & Nov 9--15     & Protocol & CP10--CP14 & B: Nov 15, Gate 1 \\
+4 & Nov 16--22    & First bug & CP15--CP17, CP22, and Project Liftoff & Liftoff due Nov 23 \\
+5 & Nov 23--29    & First bug (light week) & CP18, CP19, CP21, and the CP24 design & C: Nov 29 \\
+6 & Nov 30--Dec 6 & Finish and scale out & CP20, build CP24, then CP23 & D: Dec 6, Gate 2 \\
+7 & Dec 7--13     & Wrap-up & Report, poster, demo, buffer & Due Dec 14 \\
 \bottomrule
 \end{tabularx}
 \end{center}
 
-\lbl{Gate 1, Sunday, October 25} If Milestone B is not working, drop every bonus item. Keep going on must-haves only.
+\lbl{Project Liftoff} Draft the Project Proposal and Team Charter by Wednesday, November 18, and submit by Sunday, November 22. This guide, the team guide, and \code{docs/plan.md} are the source material.
 
-\lbl{Gate 2, Sunday, November 29} If Milestone D is not done, skip the bonus week. Use it to finish the must-haves.
+\lbl{Gate 1, Sunday, November 15} If Milestone B is not working, drop bonus items B2 to B5 now. Keep going on must-haves only. CP24 stays, and it has a smaller fallback (Gate 2).
+
+\lbl{Gate 2, Sunday, December 6} If Milestone D is not done, shrink CP24 but keep its core: the coordinator re-sends a dead worker's seeds to another worker. Drop workers joining in the middle of a sweep, and tuning the range sizes. Dead-worker recovery is the last thing to cut. If it is cut, write it up as a limit. Every other must-have ships in full.
 
 \section{Phase 0: Ground}
 
 \subsection{CP0: A repo that tests itself}
-\when{September 23 to 27}
+\when{Done}
 
 \lbl{Goal} An empty Go project where every push runs the tests.
 
@@ -291,7 +311,7 @@ Everything in this phase runs inside one Go process. There is no JSON and no chi
 One rule holds for the whole phase: no goroutines and no real clock in the core.
 
 \subsection{CP1: Virtual clock}
-\when{Week of September 28}
+\when{October 29 to November 1}
 
 \lbl{Goal} A clock that moves only when the simulator moves it.
 
@@ -322,7 +342,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \lbl{Go you will meet} \code{time.Duration}, \code{int64}, and the \code{errors} package.
 
 \subsection{CP2: Event queue}
-\when{Week of September 28}
+\when{October 29 to November 1}
 
 \lbl{Goal} A queue that always hands back the earliest event.
 
@@ -354,7 +374,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \lbl{Go you will meet} \code{container/heap}.
 
 \subsection{CP3: One seed, many streams}
-\when{Week of September 28}
+\when{October 29 to November 1}
 
 \lbl{Goal} Every random choice in a run comes from one seed.
 
@@ -385,7 +405,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \lbl{Go you will meet} \code{math/rand/v2}, whose PCG generator takes explicit seeds, and \code{hash/fnv}.
 
 \subsection{CP4: The loop}
-\when{Week of October 5}
+\when{Week of November 2}
 
 \lbl{Goal} A loop that takes the next event, runs its handler, and repeats until the run ends.
 
@@ -415,7 +435,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \end{checks}
 
 \subsection{CP5: Trace and hash}
-\when{Week of October 5}
+\when{Week of November 2}
 
 \lbl{Goal} Every run writes a trace, and the trace gets a fingerprint.
 
@@ -445,7 +465,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \lbl{Go you will meet} \code{encoding/json}, \code{crypto/sha256}, \code{io.MultiWriter}, and \code{bufio}.
 
 \subsection{CP6: Simulated network}
-\when{Week of October 5}
+\when{Week of November 2}
 
 \lbl{Goal} Messages between nodes travel through Diaspore with a seeded delay.
 
@@ -455,7 +475,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \begin{asks}
   \item What does the network hold? Say it in one sentence.
   \item Where does the delay range come from for now?
-  \item Random delays already let messages overtake each other. Do you still need a separate reorder fault? Write your answer in the log.
+  \item Random delays already let messages overtake each other. Do you still need a separate reorder fault? Write your answer in the pull request.
 \end{asks}
 
 \lbl{Tests first}
@@ -470,11 +490,12 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
   \item Ping-pong runs over the simulated network.
 \end{checks}
 
-\begin{milestone}{Milestone A --- Sunday, October 11: Deterministic core}
+\begin{milestone}{Milestone A --- Sunday, November 8: Deterministic core}
 \begin{checks}
   \item Ping-pong runs over the simulated network.
   \item The same seed gives the same hash, every time.
   \item The core has no goroutines and no real clock.
+  \item \code{PROTOCOL.md} is written.
   \item Optional: draft blog post 1, on why distributed bugs are hard to replay.
 \end{checks}
 \end{milestone}
@@ -484,7 +505,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 Now nodes become real programs. The protocol is the product, so it gets written down first.
 
 \subsection{CP7: Protocol spec v1}
-\when{Week of October 12}
+\when{October 29 to November 1}
 
 \lbl{Goal} A written spec that someone could implement without asking you anything.
 
@@ -513,7 +534,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \lbl{Go you will meet} A JSON Schema validator library for your tests, if you want one.
 
 \subsection{CP8: Talking to one process}
-\when{Week of October 12}
+\when{Week of November 2}
 
 \lbl{Goal} Start a node program, send it \code{init}, and read its reply.
 
@@ -543,7 +564,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \lbl{Go you will meet} \code{os/exec}, \code{bufio.Scanner} (note its default line limit of 64 KB), \code{bufio.Writer} with \code{Flush}, and \code{encoding/json}.
 
 \subsection{CP9: Lockstep driver}
-\when{Week of October 12}
+\when{Week of November 2}
 
 \lbl{Goal} Send one event, wait for its reply, apply it, and repeat.
 
@@ -575,7 +596,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \lbl{Go you will meet} Goroutines and \code{select}, but only in the process driver, never in the loop. Also \code{context.WithTimeout}.
 
 \subsection{CP10: Timers}
-\when{Week of October 19}
+\when{Week of November 9}
 
 \lbl{Goal} Nodes can set and cancel timers.
 
@@ -602,7 +623,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \end{checks}
 
 \subsection{CP11: Storage, crash, and restart}
-\when{Week of October 19}
+\when{Week of November 9}
 
 \lbl{Goal} Nodes can save state that survives a crash.
 
@@ -631,7 +652,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \end{checks}
 
 \subsection{CP12: check-determinism}
-\when{Week of October 19}
+\when{Week of November 9}
 
 \lbl{Goal} A command that runs one seed twice and compares the results.
 
@@ -655,14 +676,14 @@ Now nodes become real programs. The protocol is the product, so it gets written 
   \item \code{diaspore check-determinism --seed 42} works on the ring test.
 \end{checks}
 
-\begin{milestone}{Milestone B --- Sunday, October 25: Real processes in lockstep (Gate 1)}
+\begin{milestone}{Milestone B --- Sunday, November 15: Real processes in lockstep (Gate 1)}
 \begin{checks}
   \item Real node processes run in lockstep, with timers.
   \item Crash and restart work, with storage.
   \item \code{check-determinism} catches a bad node.
   \item Publish blog post 1.
 \end{checks}
-If this is not working, drop every bonus item now.
+If this is not working, drop bonus items B2 to B5 now. CP24 stays, with its smaller fallback.
 \end{milestone}
 
 \section{Phase 3: The first real bug}
@@ -670,7 +691,7 @@ If this is not working, drop every bonus item now.
 By the end of this phase, a sweep finds the planted bug and a \code{.pappus} file replays it every time.
 
 \subsection{CP13: Config file}
-\when{Week of October 26}
+\when{Week of November 9}
 
 \lbl{Goal} \code{diaspore.yaml} describes a whole run.
 
@@ -697,7 +718,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP14: Faults: delay, drop, and duplicate}
-\when{Week of October 26}
+\when{Week of November 9}
 
 \lbl{Goal} Rules from the config change what the network does.
 
@@ -726,7 +747,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP15: Crash schedule and partitions}
-\when{Week of November 2}
+\when{Week of November 16}
 
 \lbl{Goal} Crash nodes on a seeded schedule, and split the network into groups.
 
@@ -754,7 +775,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP16: Workload and history}
-\when{Week of November 2}
+\when{Week of November 16}
 
 \lbl{Goal} Virtual clients send key-value requests and record what happened.
 
@@ -782,7 +803,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP17: Example key-value node with a planted bug}
-\when{Week of November 9}
+\when{Week of November 16}
 
 \lbl{Goal} A small replicated key-value node in Go, speaking raw JSON with no SDK.
 
@@ -807,7 +828,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP18: Checker: acked writes are never lost}
-\when{Week of November 9}
+\when{Week of November 23 (light week)}
 
 \lbl{Goal} A checker that catches the planted bug.
 
@@ -835,7 +856,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP19: .pappus, replay, and the first sweep}
-\when{Week of November 9}
+\when{Week of November 23 (light week)}
 
 \lbl{Goal} Sweep seeds until the bug appears, save it, and replay it.
 
@@ -861,7 +882,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
   \item \code{diaspore replay} shows it every time.
 \end{checks}
 
-\begin{milestone}{Milestone C --- Sunday, November 15: The first bug, end to end}
+\begin{milestone}{Milestone C --- Sunday, November 29: The first bug, end to end}
 \begin{checks}
   \item A sweep finds the planted bug.
   \item The \code{.pappus} file replays it with the same hash.
@@ -873,13 +894,13 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \section{Phase 4: Finish the must-haves}
 
 \subsection{CP20: Parallel dandelion and scaling numbers}
-\when{Week of November 16}
+\when{Week of November 30}
 
 \lbl{Goal} Run many seeds at once across CPU cores, and measure how it scales.
 
 \lbl{Why} This is the scalability half of the course story.
 
-\lbl{Learn} Scaling up literally means using more of one machine. Scaling out means using more machines, which is bonus B1.
+\lbl{Learn} Scaling up literally means using more of one machine. Scaling out means using more machines, which is CP24.
 
 \lbl{Decide first}
 \begin{asks}
@@ -902,7 +923,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \lbl{Go you will meet} Goroutines, channels, \code{sync.WaitGroup}, context cancellation, and \code{runtime.NumCPU}.
 
 \subsection{CP21: Linearizability checker with Porcupine}
-\when{Week of November 16}
+\when{Week of November 23 (light week)}
 
 \lbl{Goal} A stronger checker for the key-value store.
 
@@ -931,7 +952,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \lbl{Go you will meet} \code{github.com/anishathalye/porcupine}.
 
 \subsection{CP22: One tiny raw node in another language}
-\when{Week of November 23 (light week)}
+\when{Week of November 16}
 
 \lbl{Goal} Prove ``any language'' with a small node written outside Go.
 
@@ -956,7 +977,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \end{checks}
 
 \subsection{CP23: Docs and release v0.1.0}
-\when{Week of November 23 (light week)}
+\when{Week of November 30}
 
 \lbl{Goal} A stranger can install Diaspore and watch a bug replay within ten minutes.
 
@@ -977,28 +998,57 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 
 \lbl{Go you will meet} GoReleaser, if you choose release binaries.
 
-\begin{milestone}{Milestone D --- Sunday, November 29: Every must-have is done (Gate 2)}
-\begin{checks}
-  \item Every must-have works and is tested.
-  \item v0.1.0 is tagged.
-\end{checks}
-If this is not done, skip the bonus week.
-\end{milestone}
+\subsection{CP24: dandelion across machines}
+\when{Design in the week of November 23. Build in the week of November 30.}
 
-\section{Phase 5: Bonus}
-\when{November 30 to December 6, only after Milestone D}
+\lbl{Goal} A coordinator hands out seed ranges to workers on other machines, collects the failures, and survives a dead worker.
 
-Do these in order, and stop when the week ends.
+\lbl{Why} One machine only shows scaling up. This is the scale-out half of the course story, and it is the part of Diaspore that is itself a distributed system. A few workers cannot prove internet scale. They can show a trend and a bottleneck, so the report claims only that.
 
-\subsection{B1: dandelion across machines}
+\lbl{Learn} A coordinator literally means the one process that hands out the work and collects the results. A worker does the work. Re-running a seed is safe, because the same seed always gives the same run.
 
-A coordinator hands out seed ranges to workers on several machines. This is the strongest scale-out story for the course.
+\lbl{Start early} It only needs single runs and the \code{.pappus} file, so write the design in week 5. Answer the questions below, and draft the two messages: coordinator to worker, and worker to coordinator. Put them in a pull request.
 
+\lbl{Decide first}
 \begin{asks}
   \item How do workers talk to the coordinator?
   \item What happens when a worker dies in the middle of a range?
-  \item How do you make sure no seed runs twice, and none is skipped?
+  \item How do you make sure no seed is skipped, and none is counted twice?
+  \item How does a worker check that it has the same Diaspore version and floret programs as the coordinator?
+  \item Where do the workers run: laptops, cloud instances, or containers? Only separate machines count as scaling out. Say which one you used in the report.
+  \item What will you measure? At least seeds per second against worker count across machines, and the cost of handing out work.
+  \item Where does it stop scaling? Find the bottleneck: the coordinator handing out work, the network, or the lockstep round trip to each floret.
 \end{asks}
+
+\lbl{Tests first}
+\begin{checks}
+  \item A sweep across workers finds the same failing seeds as a single-machine sweep.
+  \item When a worker is stopped in the middle of a range, its seeds go to another worker.
+  \item Each failing seed is reported once, with its \code{.pappus} file.
+\end{checks}
+
+\lbl{Done when}
+\begin{checks}
+  \item The sweep runs on at least two machines, with at least four workers in total.
+  \item You have a chart of seeds per second for one machine and for several machines.
+  \item You can name the bottleneck, with evidence from the chart.
+\end{checks}
+
+\lbl{Go you will meet} \code{net/http} or \code{net/rpc}, \code{context}, and timeouts.
+
+\begin{milestone}{Milestone D --- Sunday, December 6: Every must-have is done (Gate 2)}
+\begin{checks}
+  \item Every must-have works and is tested.
+  \item \code{dandelion} runs across at least two machines and four workers, with scaling charts for one machine and for several, and the bottleneck named.
+  \item v0.1.0 is tagged.
+\end{checks}
+If this is not done, shrink CP24 as Gate 2 says.
+\end{milestone}
+
+\section{Phase 5: Bonus}
+\when{No scheduled week. Only if Milestone D lands early, or in the buffer days.}
+
+B1 moved into the must-haves as CP24, so the bonus items start at B2. Do these in order. They never take time from a must-have.
 
 \subsection{B2: HTML timeline viewer}
 
@@ -1023,72 +1073,51 @@ A thin floret around etcd's Raft library. The library has no clock or network of
 \end{asks}
 
 \section{Phase 6: Wrap-up}
-\when{December 7 to 13}
+\when{December 7 to 13. Deliverables are due Monday, December 14, 9am Vancouver, which is 11am Boston.}
 
 Report outline:
 
 \begin{enumerate}
   \item The problem: why distributed bugs do not replay.
   \item The design: virtual time, one seed, lockstep, and the protocol.
+  \item Why Diaspore is a distributed system (see below).
   \item Faults and checkers.
-  \item Results: the bug found, the scaling chart, and the cost of the process round trip.
+  \item Results: the bug found, the scaling charts for one machine and for several, and the cost of the process round trip.
   \item Limits, stated honestly, plus future work on gray, response, and Byzantine failures, and on interception mode.
   \item Related work: FoundationDB, TigerBeetle's VOPR, Maelstrom, gosim, detsim, and Antithesis.
 \end{enumerate}
 
+\lbl{Why Diaspore is a distributed system} The report needs one section that answers this question. Make these points, with evidence from CP24:
+
+\begin{itemize}
+  \item There are several machines and no shared memory. The coordinator and the workers talk only by messages.
+  \item Part of the system can fail while the rest keeps going. A worker can die in the middle of a range. The coordinator must notice, and re-send the seeds.
+  \item Recovery is simple because of determinism. Re-running a seed gives the same run. MapReduce relies on the same idea when it re-runs a task.
+  \item Diaspore orders events without a real clock. It uses virtual time and a fixed tie-break. This is the question Lamport's time paper asks.
+  \item Adding workers raises throughput until something becomes the bottleneck. The charts show where.
+  \item The checkers apply course ideas to the tested systems: replication, and linearizability.
+\end{itemize}
+
+Say what the charts show: a trend and a bottleneck. Do not claim internet scale.
+
 Demo script: sweep, failure, \code{.pappus} file, replay, and the timeline if B2 exists.
 
-Also publish blog post 3, and keep two days as buffer.
+Also publish blog post 3.
 
-\clearpage
-\section{Decisions log}
-\label{sec:log}
+\lbl{Final project deliverables, due Monday, December 14, 9am Vancouver}
 
-Write each ``Decide first'' answer here, with the reason. Future you will thank you.
+\begin{itemize}
+  \item A link to the shared repository. The README says what Diaspore is and why you built it. The commits, issues, and pull requests show how the project moved over time.
+  \item A project management write-up: how the design moved from the first plan to the final state, who worked on what, and the problems on the way.
+  \item An experiments write-up as a PDF, at most five pages. For each experiment: the purpose, the tradeoff, and the limits. Then the results with charts, and the analysis. The experiment code is in the repository.
+  \item A solo reflection from each person, at most five pages, on what that person learned. It is not a team effort. Keep your own work visible in commits, pull requests, and issues.
+  \item The syllabus also lists a poster, a blog report, and the presentation. Details come later in the semester.
+\end{itemize}
 
-\begin{center}
-\small
-\renewcommand{\arraystretch}{2.4}
-\begin{tabularx}{\linewidth}{|p{1.5cm}|p{1.2cm}|X|X|}
-\hline
-\textbf{Date} & \textbf{CP} & \textbf{Decision} & \textbf{Why} \\
-\hline
-Sep 23 & --- & Core in Go. Nodes in any language. SDKs optional. No Python SDK. & The protocol is the product. \\
-\hline
-Oct 7 & --- & Keep the floret protocol for the course. Interception of unmodified programs comes after. & Full interception is years of work and Linux only. A working core comes first. \\
-\hline
-Oct 7 & CP9 & The loop talks to florets only through a small driver interface. & So interception can be added later without changing the core. \\
-\hline
-Oct 7 & --- & Add etcd Raft as a floret, as bonus B5. & Puts real, widely used code inside Diaspore. \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
- & & & \\
-\hline
-\end{tabularx}
-\end{center}
+\lbl{Final project presentations} Monday, December 14, 1 to 3pm Vancouver, which is 3 to 5pm Boston.
 
-\clearpage
+\lbl{Wrap-up plan} Freeze the code and the experiment runs by Wednesday, December 9. Write after the freeze. Keep Saturday and Sunday as buffer, and submit by Sunday night.
+
 \section{Glossary}
 
 \begin{description}[leftmargin=0pt, itemsep=3pt, parsep=0pt]
