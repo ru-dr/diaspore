@@ -1,0 +1,468 @@
+\documentclass[12pt,letterpaper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[margin=1in]{geometry}
+\usepackage{microtype}
+\usepackage{parskip}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{array}
+\usepackage{amssymb}
+\usepackage{framed}
+\usepackage{listings}
+\usepackage{tocloft}
+\usepackage[hidelinks]{hyperref}
+\setlength{\cftbeforesecskip}{2pt}
+
+\hypersetup{pdftitle={Diaspore Team Guide}, pdfauthor={The Diaspore team}}
+
+\setcounter{secnumdepth}{1}
+\setcounter{tocdepth}{1}
+\setlength{\emergencystretch}{3em}
+
+\newcommand{\code}[1]{\texttt{\detokenize{#1}}}
+\newcommand{\lbl}[1]{\textbf{#1}\enspace}
+\newcommand{\fillin}[1]{\textbf{[FILL IN: #1]}}
+
+\setlist[itemize]{label=$\bullet$, leftmargin=1.6em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\setlist[enumerate]{leftmargin=1.8em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\newlist{checks}{itemize}{1}
+\setlist[checks]{label=$\square$, leftmargin=1.6em, itemsep=2pt, topsep=2pt, parsep=0pt}
+\newenvironment{milestone}[1]{\begin{framed}\noindent\textbf{#1}\par}{\end{framed}}
+
+\lstdefinestyle{cmd}{basicstyle=\ttfamily\small, breaklines=true, columns=fullflexible, keepspaces=true, frame=single, framesep=4pt}
+
+\title{\textbf{Diaspore Team Guide}\\[0.3em]\large CS 6650 final project}
+\author{The Diaspore team}
+\date{Version 0.2, October 29, 2026}
+
+\begin{document}
+
+\maketitle
+
+\section*{How to read this guide}
+
+This guide gets the whole team on the same page. Read it top to bottom once. After that, use it as a map.
+
+Lines marked \fillin{...} are open items. We fill them in together, and anyone can edit this guide.
+
+\tableofcontents
+
+\newpage
+
+\section{What Diaspore is}
+
+Diaspore is a tool that makes distributed bugs reproducible.
+
+A distributed bug often depends on timing and message order. That makes it hard to repeat. If you pause a node to debug it, the timing changes, and the bug can hide.
+
+Diaspore fixes this. Every source of randomness in a run comes from one seed, which is one number. A failing run can then replay exactly, on any machine.
+
+\section{Five words you will see everywhere}
+
+Every name comes from the dandelion. Nouns are botanical. Commands are plain verbs.
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Term} & \textbf{What it means in Diaspore} \\
+\midrule
+Diaspore & The project and the binary \\
+Floret & One node. A program that speaks the Diaspore protocol \\
+Capitulum & The set of florets in one run \\
+Pappus & The replay file, with the \code{.pappus} extension \\
+Dandelion & The seed sweep, on one machine or across many \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The plural of floret is florets. The plural of capitulum is capitula. Never ``capitulums''.
+
+Before anyone adds a sixth term, check the rule in \code{docs/naming.md}. It also lists names we rejected on purpose.
+
+\section{How it works}
+
+Read \code{docs/design.md} for the full version. This is the short version.
+
+\lbl{One binary owns everything.} Diaspore is a single Go program. It owns time, the network, faults, client load, and randomness.
+
+\lbl{Florets are separate programs.} They can be written in any language. They talk to Diaspore with JSON lines on stdin and stdout.
+
+\lbl{Events and replies.} A floret only reacts. Diaspore sends it one event, and it answers with one reply. There are three kinds of event: \code{init}, \code{message}, and \code{timer}. The reply is called \code{done}.
+
+\lbl{Lockstep.} Lockstep means Diaspore sends one event to one floret, then waits for the reply before anything else happens. Only one floret runs at a time. This is what keeps two runs of the same seed identical. The cost is speed, because every event is a round trip to another process. We measure that cost in the report.
+
+\lbl{Virtual time.} Time is a number that Diaspore owns. It jumps straight to the next event. Florets never read a real clock.
+
+\lbl{Faults.} The course version supports five: delay, drop, duplicate, crash, and partition. Rules live in \code{diaspore.yaml}.
+
+\lbl{Checkers.} A checker reads what clients asked and got back. It decides whether a rule was broken. There are two: \code{acked-writes} and \code{linearizability}.
+
+\lbl{Dandelion across machines (CP24).} A coordinator hands out seed ranges to workers on other machines. If a worker dies, its seeds go to another worker. Re-running a seed is safe, because the same seed always gives the same run.
+
+\lbl{Outputs of a run.}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{File} & \textbf{What it holds} \\
+\midrule
+\code{trace.jsonl} & Every event in the run. Its hash is the run's fingerprint. \\
+\code{history.jsonl} & Every client request and result, with times \\
+\code{*.pappus} & The seed, full config, floret hashes, versions, expected trace hash, and a failure summary \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\lbl{Commands.}
+
+\begin{lstlisting}[style=cmd]
+diaspore run --seed 8837421
+diaspore dandelion --seeds 1-1000 --workers 8
+diaspore replay run-8837421.pappus
+diaspore check-determinism --seed 8837421
+\end{lstlisting}
+
+\subsection*{Why Diaspore counts as a distributed system}
+
+The simulator runs one floret at a time on purpose. So one run is not distributed. The sweep is.
+
+With CP24, the coordinator and the workers share no memory and talk only by messages. A worker can die in the middle of a range, and the coordinator must notice and re-send its seeds. That is partial failure. Recovery is simple because of determinism, which is the same idea MapReduce uses when it re-runs a task.
+
+We will not claim internet scale. A few workers can show a trend and a bottleneck. The charts must show where it stops scaling.
+
+\section{The determinism contract}
+
+Determinism literally means the same inputs always give the same outputs. The whole project depends on it.
+
+\lbl{Florets must:}
+
+\begin{enumerate}
+  \item Do work only inside the handler for the current event.
+  \item Never read the real clock.
+  \item Never open network connections.
+  \item Never use unseeded randomness.
+  \item Keep anything that must survive a crash in \code{store}.
+\end{enumerate}
+
+\lbl{Diaspore's core must:}
+
+\begin{itemize}
+  \item Never read the real clock.
+  \item Never use global randomness.
+  \item Never run goroutines inside the event loop. Goroutines are allowed only in the process driver, and in the dandelion: between separate seeds, and in the coordinator and workers.
+\end{itemize}
+
+\code{check-determinism} runs one seed twice and compares the traces byte for byte. CI runs it on every commit.
+
+If you write code in the core, treat these rules as hard limits.
+
+\section{Scope}
+
+\lbl{Must-haves.} Every must-have ships. The gates in the plan only ever drop bonus items. The one exception is CP24, which has a smaller fallback (Gate 2).
+
+\begin{itemize}
+  \item Core: event loop, virtual time, one seed, and a trace hash.
+  \item Protocol v1, with a spec and JSON Schema files.
+  \item A lockstep process driver with a watchdog.
+  \item Timers, storage, and crash with restart.
+  \item Faults: delay, drop, duplicate, crash, and partition.
+  \item Workload and history, plus two checkers.
+  \item A Go key-value example floret with one planted bug.
+  \item One tiny floret in another language.
+  \item CLI: \code{run}, \code{dandelion}, \code{replay}, and \code{check-determinism}.
+  \item The \code{.pappus} v1 format.
+  \item \code{dandelion} across machines (CP24, formerly bonus B1).
+  \item Scaling measurements for the report, on one machine and across machines.
+\end{itemize}
+
+\lbl{Bonus,} in this order, only if Milestone D lands early:
+
+\begin{enumerate}
+  \item[B2.] An HTML timeline viewer.
+  \item[B3.] A GitHub Action that attaches the \code{.pappus} file.
+  \item[B4.] An optional Go SDK helper.
+  \item[B5.] etcd's Raft library, wrapped as a floret.
+\end{enumerate}
+
+\lbl{Not now:} a live production runtime, disk faults, clock skew, shrinking failing runs, and binary encodings.
+
+\lbl{Limits, stated honestly:}
+
+\begin{itemize}
+  \item Diaspore does not test existing services unchanged. Florets must follow the protocol.
+  \item It does not prove a system correct. It finds bugs. It cannot show there are none.
+  \item It does not model real TCP behavior, kernel scheduling, or disk timing.
+\end{itemize}
+
+\section{The plan}
+
+Work starts today, Thursday, October 29, 2026, and ends on December 14. The checkpoint details in \code{docs/build-guide.pdf} (Goal, Why, Decide first, Tests first, Done when) are the source of truth. Replace the copy in the repo with the new version. \code{docs/plan.md} still shows the old dates. Use the calendar below until it is updated.
+
+\lbl{Starting point:} CP0 is done, and CP1 is next. \fillin{confirm the last finished checkpoint}
+
+\lbl{Work left:} CP1 to CP24. At 2 to 4 hours each, that is about 48 to 96 hours for the team. CP24 is bigger than most, so plan the high end for it. Hours per person per week: \fillin{hours}
+
+\subsection*{Project deadlines}
+
+Deadlines use Vancouver time. The Vancouver clock stays at UTC-7 all year. After November 1, Boston is two hours ahead, so 9am in Vancouver is 11am in Boston.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}l X X@{}}
+\toprule
+\textbf{Due (Vancouver)} & \textbf{What} & \textbf{Notes} \\
+\midrule
+Mon Nov 23, 9am & Project Liftoff: Project Proposal and Team Charter & 11am Boston. Graded on on-time delivery and how actionable the plan is. \\
+Mon Dec 14, 9am & Final Project deliverables (20\% of the grade) & 11am Boston \\
+Mon Dec 14, 1--3pm & Final Project presentations & 3--5pm Boston \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Draft the Project Proposal and Team Charter by Wednesday, November 18, and submit by Sunday, November 22.
+
+\subsection*{Calendar}
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}l l l X l@{}}
+\toprule
+\textbf{Week} & \textbf{Dates} & \textbf{Phase} & \textbf{Checkpoints} & \textbf{Milestone} \\
+\midrule
+1 & Oct 29--Nov 1 & Core & CP1, CP2, CP3, CP7, in parallel (4 days) & \\
+2 & Nov 2--8      & Core, then protocol & CP4--CP6, CP8, CP9 & A: Nov 8 \\
+3 & Nov 9--15     & Protocol & CP10--CP14 & B: Nov 15, Gate 1 \\
+4 & Nov 16--22    & First bug & CP15--CP17, CP22, and Project Liftoff & Liftoff due Nov 23 \\
+5 & Nov 23--29    & First bug (light week) & CP18, CP19, CP21, and the CP24 design & C: Nov 29 \\
+6 & Nov 30--Dec 6 & Finish and scale out & CP20, build CP24, then CP23 & D: Dec 6, Gate 2 \\
+7 & Dec 7--13     & Wrap-up & Report, poster, demo, buffer & Due Dec 14 \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\subsection*{Milestones}
+
+\begin{itemize}
+  \item \lbl{A (Sun Nov 8): deterministic core.} Ping-pong runs over the simulated network. The same seed gives the same hash, every time. The core has no goroutines and no real clock. \code{PROTOCOL.md} is written.
+  \item \lbl{B (Sun Nov 15): real processes in lockstep.} Real floret processes run in lockstep, with timers. Crash and restart work, with storage. \code{check-determinism} catches a bad floret. Blog post 1 is published.
+  \item \lbl{C (Sun Nov 29): the first bug, end to end.} A sweep finds the planted bug. The \code{.pappus} file replays it with the same hash. A short demo is recorded.
+  \item \lbl{D (Sun Dec 6): every must-have is done.} Every must-have works and is tested. \code{dandelion} runs on at least two machines and four workers, with scaling charts and the bottleneck named. v0.1.0 is tagged, with binaries for Linux, macOS, and Windows.
+\end{itemize}
+
+\lbl{Gate 1 (Nov 15).} If Milestone B is not working, drop bonus items B2 to B5. Put that time into the must-haves. CP24 stays.
+
+\lbl{Gate 2 (Dec 6).} If Milestone D is not done, shrink CP24 but keep its core: the coordinator re-sends a dead worker's seeds to another worker. Drop workers joining in the middle of a sweep, and tuning the range sizes. Dead-worker recovery is the last thing to cut. If it is cut, we write it up as a limit. Every other must-have ships in full.
+
+\lbl{Why this can work.} CP1, CP2, CP3, and CP7 do not depend on each other, so four people can start at the same time. CP24 only needs single runs and the \code{.pappus} file, so its design can start in week 5.
+
+\section{Repo and how we work}
+
+Repo: \url{https://github.com/ru-dr/diaspore}
+
+License: MIT.
+
+\lbl{Get started}
+
+\begin{lstlisting}[style=cmd]
+git clone https://github.com/ru-dr/diaspore.git
+cd diaspore
+go test ./...
+\end{lstlisting}
+
+If you cannot open the repo, tell the team and we will add you as a collaborator.
+
+\lbl{Layout, in short}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Folder} & \textbf{What it is for} \\
+\midrule
+\code{cmd/diaspore/} & The command line entry points \\
+\code{internal/} & The private engine. Other projects cannot import it. \\
+\code{testdata/florets/} & Small test florets. Go tooling skips this folder when building. \\
+\code{examples/} & The example key-value floret, and the second-language floret \\
+\code{docs/} & Design, plan, naming, findings, and the build guide \\
+\code{schema/} & JSON Schema files for the protocol \\
+\code{runs/} & Run outputs. Listed in \code{.gitignore}. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+The full file-by-file layout is section 15 of \code{docs/design.md}. Each file shows which checkpoint creates it.
+
+\lbl{Working rules}
+
+\begin{itemize}
+  \item GitHub Flow. \code{main} is protected. Work on a branch and merge through a pull request. Branch names use a type prefix.
+  \item Draft pull requests are welcome. They start CI early.
+  \item Conventional Commits for commit messages.
+  \item CI runs the tests on Linux, macOS, and Windows on every push. Keep it green.
+  \item Tests first. Every \code{.go} file gets a matching \code{_test.go} file next to it.
+  \item One owner for each checkpoint. Someone else reviews the pull request.
+  \item Decisions get written down. Each checkpoint has ``Decide first'' questions. Record the answer and the reason in the pull request description. A bigger decision becomes an ADR in \code{docs/adr/}.
+  \item Decisions are shared. Anyone can propose a change to the plan or the design with a pull request or at the weekly sync.
+  \item Seeds that break a checker go in \code{docs/findings.md}.
+  \item Keep your own work visible in commits, pull requests, and issues. Each person writes a solo reflection, and it needs evidence.
+  \item Naming. Use the vocabulary in Section 2.
+\end{itemize}
+
+\section{Reading list}
+
+\lbl{In the repo, in this order}
+
+\begin{enumerate}
+  \item \code{README.md}
+  \item \code{docs/naming.md}
+  \item \code{docs/design.md}
+  \item \code{docs/plan.md}
+  \item \code{docs/build-guide.pdf}
+  \item \code{PROTOCOL.md} (the message format between Diaspore and florets, written in CP7)
+\end{enumerate}
+
+\lbl{Related work.} These are the projects we compare against in the report.
+
+\begin{itemize}
+  \item FoundationDB and TigerBeetle's VOPR: whole-system simulation driven by one seed.
+  \item Jepsen's Maelstrom: nodes as separate programs speaking JSON over stdin and stdout.
+  \item gosim and detsim for Go. turmoil and madsim for Rust.
+  \item Antithesis: a commercial platform for deterministic testing of any software.
+  \item Porcupine (\code{github.com/anishathalye/porcupine}): the Go library we use for the linearizability checker.
+\end{itemize}
+
+Before we publish any claim about these tools, we check what they support today. In particular: does Maelstrom support exact replay from a seed, and what are the current features of gosim and detsim?
+
+\lbl{Course background} (recommended in the syllabus, not required)
+
+\begin{itemize}
+  \item \textit{Distributed Systems for Fun and Profit}, Mikito Takada (online)
+  \item \textit{Designing Data-Intensive Applications}, Martin Kleppmann
+\end{itemize}
+
+Team research notes and links: \fillin{paste or link the research here}
+
+\section{Who does what}
+
+This is a starting proposal. We agree on owners together at the first sync, and anyone can ask to swap. The table follows the calendar in Section 6, and shows what each area needs first.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}X l l X l@{}}
+\toprule
+\textbf{Area} & \textbf{Checkpoints} & \textbf{Week} & \textbf{Needs first} & \textbf{Owner} \\
+\midrule
+Clock, queue, and seed & CP1, CP2, CP3 & 1 & Nothing. These three are independent. & \textbf{[FILL IN]} \\
+Protocol spec and JSON Schema & CP7 & 1 & Appendix A of the build guide & \textbf{[FILL IN]} \\
+Loop, trace, simulated network & CP4, CP5, CP6 & 2 & CP1 to CP3 & \textbf{[FILL IN]} \\
+Process driver and lockstep & CP8, CP9 & 2 & Protocol (CP7) & \textbf{[FILL IN]} \\
+Timers, storage, crash, and restart & CP10, CP11 & 3 & Lockstep driver (CP9) & \textbf{[FILL IN]} \\
+\code{check-determinism} & CP12 & 3 & Lockstep driver (CP9) & \textbf{[FILL IN]} \\
+Config file and faults & CP13, CP14 & 3 & Core, network & \textbf{[FILL IN]} \\
+Crash schedule and partitions & CP15 & 4 & Config (CP13) & \textbf{[FILL IN]} \\
+Workload and history recording & CP16 & 4 & Network and config & \textbf{[FILL IN]} \\
+Example key-value floret with the planted bug & CP17 & 4 & Protocol (CP7) & \textbf{[FILL IN]} \\
+Second-language floret & CP22 & 4 & Protocol (CP7), lockstep driver (CP9) & \textbf{[FILL IN]} \\
+Acked-writes checker, \code{.pappus}, replay, first sweep & CP18, CP19 & 5 & History format (CP16) & \textbf{[FILL IN]} \\
+Linearizability checker & CP21 & 5 & History format (CP16) & \textbf{[FILL IN]} \\
+Dandelion across machines: design & CP24 & 5 & Single runs, \code{.pappus} contents & \textbf{[FILL IN]} \\
+Parallel dandelion and scaling numbers & CP20 & 6 & Working sweep (CP19) & \textbf{[FILL IN]} \\
+Dandelion across machines: build, and scaling charts & CP24 & 6 & CP20, and the design & \textbf{[FILL IN]} \\
+Docs and release v0.1.0 & CP23 & 6 & Everything above & \textbf{[FILL IN]} \\
+Timeline viewer, Action, SDK, Raft (bonus) & B2--B5 & None & Milestone D done early & \textbf{[FILL IN]} \\
+Report, demo, poster, blog posts & Wrap-up & 7 & Results from the areas above & \textbf{[FILL IN]} \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\lbl{A starting split for four people.} One person takes the core (CP1 to CP6). One takes the protocol and the process driver (CP7 to CP12). One takes workload, history, checkers, and the example floret. One takes the dandelion, then CP24, then the scaling experiments. The fourth area has the most risk, so the others should help with it in week 6.
+
+\lbl{Two traps for the second-language floret.} Python randomizes string hashing in each process. JavaScript's \code{Math.random} cannot be seeded. Diaspore has to set up each floret's environment to avoid these.
+
+\section{Open choices}
+
+These are not decided yet. They must be locked before the build reaches them.
+
+\begin{center}
+\small
+\begin{tabularx}{\linewidth}{@{}X X l@{}}
+\toprule
+\textbf{Choice} & \textbf{Options} & \textbf{Needed by} \\
+\midrule
+Language of the second floret & Python or JavaScript & CP22, Week 4 (Nov 16) \\
+How workers talk to the coordinator, and where workers run & \code{net/http} or \code{net/rpc}; laptops, cloud instances, or containers & CP24 design, Week 5 (Nov 23) \\
+How people install Diaspore & \code{go install}, release binaries, or both & CP23, Week 6 (Nov 30) \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+Two smaller questions are left to checkpoints: whether reordering needs its own fault (CP6, Week 2), and what happens to messages and timers aimed at a crashed floret (CP11, Week 3).
+
+\section{Course deliverables and dates}
+
+The syllabus is tentative and may change. Check Canvas and Piazza for updates.
+
+\begin{itemize}
+  \item The final project is worth 20\% of the course grade.
+  \item Project Liftoff (Project Proposal and Team Charter): Monday, November 23, 9am Vancouver.
+  \item Final project deliverables: Monday, December 14, 9am Vancouver.
+  \item Final project presentations: Monday, December 14, 1 to 3pm Vancouver.
+  \item Thanksgiving is Thursday, November 26. That week is planned light.
+\end{itemize}
+
+\lbl{Final deliverables}
+
+\begin{itemize}
+  \item A link to the shared repository. The README says what Diaspore is and why we built it. The commits, issues, and pull requests show how the project moved over time.
+  \item A project management write-up: how the design moved from the first plan to the final state, who worked on what, and the problems on the way.
+  \item An experiments write-up as a PDF, at most five pages. For each experiment: the purpose, the tradeoff, and the limits. Then the results with charts, and the analysis. The experiment code is in the repository.
+  \item A solo reflection from each person, at most five pages. It is not a team effort.
+  \item The syllabus also lists a poster, a blog report, and the presentation. Details come later in the semester.
+\end{itemize}
+
+\lbl{Final report outline}
+
+\begin{enumerate}
+  \item The problem: why distributed bugs do not replay.
+  \item The design: virtual time, one seed, lockstep, and the protocol.
+  \item Why Diaspore is a distributed system: the coordinator and workers, partial failure, and safe re-running of seeds.
+  \item Faults and checkers.
+  \item Results: the bug found, the scaling charts for one machine and for several, the bottleneck, and the cost of the process round trip.
+  \item Limits, stated honestly, plus future work.
+  \item Related work.
+\end{enumerate}
+
+Demo script: sweep, failure, \code{.pappus} file, replay, and the timeline if B2 exists.
+
+Wrap-up plan: freeze the code and the experiment runs by Wednesday, December 9. Write after the freeze. Keep Saturday and Sunday as buffer, and submit by Sunday night.
+
+\section{How we talk to each other}
+
+We agree on these together at the first sync. \fillin{chat channel, weekly sync time, how to ask for review on a pull request}
+
+\section{Glossary}
+
+\begin{center}
+\begin{tabularx}{\linewidth}{@{}l X@{}}
+\toprule
+\textbf{Term} & \textbf{Plain meaning} \\
+\midrule
+Seed & One number. Every random choice in a run comes from it. \\
+Determinism & The same inputs always give the same outputs. \\
+Lockstep & One event goes to one floret, and Diaspore waits for the reply before anything else happens. \\
+Virtual time & A clock that Diaspore moves forward by hand. It never reads the real clock. \\
+Trace & The record of every event in a run. Its hash is the run's fingerprint. \\
+History & The record of every client request and reply, with times. \\
+Checker & A program that reads a history and says whether a rule was broken. \\
+Linearizability & Every operation looks like it happened at one instant between its start and end, as if there were only one copy of the data. \\
+CI & Continuous integration. A server that runs your checks on every push. \\
+Unknown outcome & A request that timed out. The write may or may not have happened. Checkers must treat it that way. \\
+Coordinator & The one process that hands out seed ranges to workers and collects the failures. \\
+Worker & A process, on any machine, that runs the seeds the coordinator gives it. \\
+Bottleneck & The part of the system that limits how fast the whole thing can go. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\end{document}
