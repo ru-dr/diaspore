@@ -14,6 +14,8 @@ I chose int64 as my base data shape, using a Go defined type. With int64, I have
 
 The unit is microseconds, as I think the smaller the unit, the better for more granular control.
 
+I did not use time.Duration. It counts in nanoseconds, not microseconds, and it lives in the same package as the real clock. A separate Time type keeps virtual time apart from real time, so the two cannot be mixed by accident. It also means the core never imports the time package.
+
 The loop will move the clock forward, and moving it back returns an error. This will be an unexported method, so outside code can read the clock but can't update it.
 
 ## Consequences

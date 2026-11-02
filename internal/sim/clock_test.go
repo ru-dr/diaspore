@@ -1,6 +1,7 @@
 package sim
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -33,8 +34,8 @@ func TestClockRefuseBackward(t *testing.T) {
 	}
 
 	err := c.advanceTo(400)
-	if err == nil {
-		t.Errorf("advanceTo(400) after 500: got nil error, want error")
+	if !errors.Is(err, ErrBackward) {
+		t.Errorf("advanceTo(400) after 500: got %v, want ErrBackward", err)
 	}
 
 	if c.Now() != 500 {

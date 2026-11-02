@@ -2,7 +2,9 @@ package sim
 
 import "errors"
 
-type Time int64
+type Time int64 // Time is virtual time in microseconds.
+
+var ErrBackward = errors.New("clock cannot move backward")
 
 type Clock struct {
 	currTime Time
@@ -18,7 +20,7 @@ func (c *Clock) Now() Time {
 
 func (c *Clock) advanceTo(t Time) error {
 	if t < c.currTime {
-		return errors.New("clock cannot move backward")
+		return ErrBackward
 	}
 	c.currTime = t
 	return nil
