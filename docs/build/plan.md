@@ -1,20 +1,35 @@
 # Plan
 
-September 23 to December 14, 2026.
+October 29 to December 14, 2026. A team of three.
 
 This file tracks progress. The full checkpoint details, with "Decide first" questions and
-"Tests first" lists, are in the build guide: [`build-guide.pdf`](build-guide.pdf).
+"Tests first" lists, are in the build guide: [`build-guide.pdf`](build-guide.pdf). If the two ever
+disagree, the build guide wins.
 
-Every must-have ships. There are no cuts. The two gates below only ever drop bonus items.
+Every must-have ships. The gates below only ever drop bonus items. The one exception is CP24,
+which has a smaller fallback at Gate 2.
 
 ---
 
 ## Assumptions
 
-- About 8 to 10 hours a week go to Diaspore. Each checkpoint is sized for 2 to 4 hours.
-- Course work is due Mondays at 9am Vancouver time, so Sundays stay free for assignments.
+- Three people share the work. Each checkpoint is sized for 2 to 4 hours of one person.
+- CP1 to CP24 is about 48 to 96 hours in all, or 16 to 32 hours each. The team finishes four to
+  five checkpoints a week. Hours per person per week are still open in the team guide.
+- Project deadlines use Vancouver time. The Vancouver clock stays at UTC-7 all year. After
+  November 1, Boston is two hours ahead, so 9am in Vancouver is 11am in Boston.
 - Thanksgiving is Thursday, November 26. That week is planned light.
-- Confirm the final project due date and presentation date on the syllabus.
+- The syllabus is tentative. Check Canvas and Piazza for changes.
+
+---
+
+## Deadlines
+
+| Due (Vancouver) | What | Notes |
+|---|---|---|
+| Mon Nov 23, 9am | Project Liftoff: Project Proposal and Team Charter | 11am Boston. Draft by Wed Nov 18, submit by Sun Nov 22. |
+| Mon Dec 14, 9am | Final Project deliverables (20%) | 11am Boston |
+| Mon Dec 14, 1 to 3pm | Final Project presentations | 3 to 5pm Boston |
 
 ---
 
@@ -22,18 +37,13 @@ Every must-have ships. There are no cuts. The two gates below only ever drop bon
 
 | Week | Dates | Phase | Checkpoints | Milestone |
 |---|---|---|---|---|
-| 1 | Sep 23 to 27 | Ground | CP0 | |
-| 2 | Sep 28 to Oct 4 | Core | CP1 to CP3 | |
-| 3 | Oct 5 to 11 | Core | CP4 to CP6 | A, Oct 11 |
-| 4 | Oct 12 to 18 | Protocol | CP7 to CP9 | |
-| 5 | Oct 19 to 25 | Protocol | CP10 to CP12 | B, Oct 25, Gate 1 |
-| 6 | Oct 26 to Nov 1 | First bug | CP13 to CP14 | |
-| 7 | Nov 2 to 8 | First bug | CP15 to CP16 | |
-| 8 | Nov 9 to 15 | First bug | CP17 to CP19 | C, Nov 15 |
-| 9 | Nov 16 to 22 | Finish | CP20 to CP21 | |
-| 10 | Nov 23 to 29 | Finish, light week | CP22 to CP23 | D, Nov 29, Gate 2 |
-| 11 | Nov 30 to Dec 6 | Bonus | B1, then B2 | |
-| 12 | Dec 7 to 13 | Wrap-up | Report, demo, buffer | Semester ends Dec 14 |
+| 1 | Oct 29 to Nov 1 | Core | CP1, CP2, CP3, CP7, in parallel (one person takes two) | |
+| 2 | Nov 2 to 8 | Core, then protocol | CP4 to CP6, CP8, CP9 | A, Nov 8 |
+| 3 | Nov 9 to 15 | Protocol | CP10 to CP14 | B, Nov 15, Gate 1 |
+| 4 | Nov 16 to 22 | First bug | CP15 to CP17, CP22, and Project Liftoff | Liftoff due Nov 23 |
+| 5 | Nov 23 to 29 | First bug, light week | CP18, CP19, CP21, and the CP24 design | C, Nov 29 |
+| 6 | Nov 30 to Dec 6 | Finish and scale out | CP20, build CP24, then CP23 | D, Dec 6, Gate 2 |
+| 7 | Dec 7 to 13 | Wrap-up | Report, poster, demo, buffer | Due Dec 14 |
 
 ---
 
@@ -41,11 +51,11 @@ Every must-have ships. There are no cuts. The two gates below only ever drop bon
 
 ### Phase 0: Ground
 
-- [ ] **CP0** A repo that tests itself: CI runs the tests on Linux, macOS, and Windows
+- [x] **CP0** A repo that tests itself: CI runs the tests on Linux, macOS, and Windows
 
 ### Phase 1: The deterministic core
 
-- [ ] **CP1** Virtual clock: a clock that moves only when the simulator moves it
+- [x] **CP1** Virtual clock: a clock that moves only when the simulator moves it
 - [ ] **CP2** Event queue: always hands back the earliest event
 - [ ] **CP3** One seed, many streams: every random choice comes from one seed
 - [ ] **CP4** The loop: take the next event, run its handler, repeat
@@ -77,59 +87,75 @@ Every must-have ships. There are no cuts. The two gates below only ever drop bon
 - [ ] **CP21** Linearizability checker with Porcupine
 - [ ] **CP22** One tiny raw floret in a second language
 - [ ] **CP23** Docs and release v0.1.0
+- [ ] **CP24** Dandelion across machines: a coordinator hands out seed ranges to workers, and
+  survives a dead worker (formerly bonus B1)
 
 ---
 
 ## Milestones
 
-### A: Deterministic core, Sunday, October 11
+### A: Deterministic core, Sunday, November 8
 
 - [ ] Ping-pong runs over the simulated network
 - [ ] The same seed gives the same hash, every time
 - [ ] The core has no goroutines and no real clock
+- [ ] `PROTOCOL.md` is written
 
-### B: Real processes in lockstep, Sunday, October 25
+### B: Real processes in lockstep, Sunday, November 15
 
 - [ ] Real floret processes run in lockstep, with timers
 - [ ] Crash and restart work, with storage
 - [ ] `check-determinism` catches a bad floret
 - [ ] Blog post 1 is published
 
-### C: The first bug, end to end, Sunday, November 15
+### C: The first bug, end to end, Sunday, November 29
 
 - [ ] A sweep finds the planted bug
 - [ ] The `.pappus` file replays it with the same hash
 - [ ] A short demo is recorded: sweep, failure, replay
 
-### D: Every must-have is done, Sunday, November 29
+### D: Every must-have is done, Sunday, December 6
 
 - [ ] Every must-have works and is tested
+- [ ] `dandelion` runs on at least two machines and four workers, with scaling charts for one
+  machine and for several, and the bottleneck named
 - [ ] v0.1.0 is tagged, with binaries for Linux, macOS, and Windows
 
 ---
 
 ## Gates
 
-**Gate 1, October 25.** If Milestone B is not working, drop every bonus item and put that time
-into the must-haves.
+**Gate 1, November 15.** If Milestone B is not working, drop bonus items B2 to B5 now and put
+that time into the must-haves. CP24 stays.
 
-**Gate 2, November 29.** If Milestone D is not done, skip the bonus week and use it to finish the
-must-haves.
+**Gate 2, December 6.** If Milestone D is not done, shrink CP24 but keep its core: the
+coordinator re-sends a dead worker's seeds to another worker. Drop workers joining in the middle
+of a sweep, and tuning the range sizes. Dead-worker recovery is the last thing to cut. If it is
+cut, write it up as a limit. Every other must-have ships in full.
 
 ---
 
-## Bonus, only after Milestone D
+## Bonus, only if Milestone D lands early
 
-- [ ] **B1** The dandelion across machines
+Do these in order. They never take time from a must-have.
+
 - [ ] **B2** HTML timeline viewer
 - [ ] **B3** GitHub Action that attaches the `.pappus` file
 - [ ] **B4** Optional Go SDK helper
+- [ ] **B5** etcd's Raft library, wrapped as a floret
 
 ---
 
 ## Wrap-up, December 7 to 13
 
-- [ ] Report: problem, design, faults and checkers, results, limits, future work, related work
+Freeze the code and the experiment runs by Wednesday, December 9. Write after the freeze. Keep
+Saturday and Sunday as buffer, and submit by Sunday night.
+
+- [ ] Report: problem, design, why Diaspore is a distributed system, faults and checkers,
+  results, limits, future work, related work
+- [ ] Project management write-up: how the design moved, who worked on what, and the problems
+- [ ] Experiments write-up as a PDF, at most five pages
+- [ ] A solo reflection from each of the three of us, at most five pages
+- [ ] Poster, and the blog report (details come later in the semester)
 - [ ] Demo: sweep, failure, pappus, replay, and the timeline if B2 exists
 - [ ] Blog post 3
-- [ ] Two days kept as buffer

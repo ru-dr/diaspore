@@ -47,7 +47,7 @@
 
 \title{\textbf{Diaspore Build Guide}\\[0.3em]\large Checkpoints from October 29 to December 14, 2026}
 \author{The Diaspore team}
-\date{Version 0.2, October 29, 2026}
+\date{Version 0.3, November 9, 2026}
 
 \begin{document}
 
@@ -97,9 +97,9 @@ The rules:
 
 Diaspore is a deterministic simulator for distributed systems. It is written in Go and ships as one binary.
 
-Nodes are separate programs, written in any language. They talk to Diaspore through JSON lines on stdin and stdout. SDKs are optional helpers, not requirements.
+Florets are separate programs, written in any language. They talk to Diaspore through JSON lines on stdin and stdout. SDKs are optional helpers, not requirements.
 
-Diaspore owns time, the network, crashes, and randomness, all driven by one seed. It sends one event to one node at a time and waits for the reply. That is what makes every run repeat exactly.
+Diaspore owns time, the network, crashes, and randomness, all driven by one seed. It sends one event to one floret at a time and waits for the reply. That is what makes every run repeat exactly.
 
 When a rule breaks, Diaspore saves a \code{.pappus} file. Anyone can replay it and see the same bug.
 
@@ -132,7 +132,7 @@ The honest cost: a system must be built, or adapted, in this style first.
 
 \subsection{What it can and cannot control}
 
-Diaspore controls what travels between nodes, and when things happen. It cannot control what happens inside the machine: threads, disk, memory, the kernel, or containers.
+Diaspore controls what travels between florets, and when things happen. It cannot control what happens inside the machine: threads, disk, memory, the kernel, or containers.
 
 \begin{center}
 \small
@@ -141,15 +141,15 @@ Diaspore controls what travels between nodes, and when things happen. It cannot 
 \textbf{Issue} & \textbf{v0.1, florets} & \textbf{v0.2, interception} \\
 \midrule
 A message arrives late or out of order & Yes & Yes \\
-A message is lost, or a partition cuts nodes off & Yes & Yes \\
+A message is lost, or a partition cuts florets off & Yes & Yes \\
 A message arrives twice & Yes & Yes \\
-A node crashes and restarts & Yes & Partly, since disk is real \\
+A floret crashes and restarts & Yes & Partly, since disk is real \\
 A timeout fires before a slow reply arrives & Yes & Yes \\
-Two nodes' clocks disagree & Not yet & Possible \\
-Two threads inside one node race each other & No & No \\
+Two florets' clocks disagree & Not yet & Possible \\
+Two threads inside one floret race each other & No & No \\
 A disk write is lost before it is saved & No & No \\
 Docker networking or DNS is misconfigured & No & No \\
-A node runs out of memory or CPU & No & No \\
+A floret runs out of memory or CPU & No & No \\
 Real TCP or kernel behavior misbehaves & No & No \\
 \bottomrule
 \end{tabularx}
@@ -168,8 +168,8 @@ Here v0.1 and v0.2 are Diaspore releases, not versions of this guide.
   \item Timers, storage, and crash with restart.
   \item Faults: delay, drop, duplicate, crash, and partition.
   \item Workload and history, plus two checkers: acked writes and linearizability.
-  \item A raw Go key-value example node with one planted bug.
-  \item One tiny raw node in another language.
+  \item A raw Go key-value example floret with one planted bug.
+  \item One tiny raw floret in another language.
   \item CLI: \code{run}, \code{dandelion} across all cores, \code{replay}, and \code{check-determinism}.
   \item \code{dandelion} across machines: a coordinator hands out seed ranges to workers on other machines (CP24, formerly bonus B1).
   \item The \code{.pappus} v1 format.
@@ -193,7 +193,7 @@ Python SDK, a real production runtime, disk faults, clock skew, shrinking failin
 
 \subsection{After the course: new failure classes}
 
-These fit the building-block design, so you or the community can add them after v0.1.
+These fit the building-block design, so the team or the community can add them after v0.1.
 
 \begin{itemize}
   \item \textbf{Gray failure} means a floret is degraded but still looks healthy. Diaspore would create the conditions, like a slow floret, a flaky link, or a one-way partition, and the checkers would catch the damage.
@@ -219,12 +219,12 @@ This is why the loop talks to florets only through a small driver interface, dec
 
 \section{Calendar}
 
-The team of four starts work on Thursday, October 29, 2026. This calendar begins that day and ends on December 14.
+The team of three started work on Thursday, October 29, 2026. This calendar begins that day and ends on December 14.
 
 Assumptions:
 
 \begin{itemize}
-  \item Four people share the work. Each checkpoint is sized for 2 to 4 hours of one person. The plan assumes the team finishes four to five checkpoints a week. The hours per person are still open in the team guide.
+  \item Three people share the work. Each checkpoint is sized for 2 to 4 hours of one person. CP1 to CP24 is about 48 to 96 hours in all, or 16 to 32 hours each. The plan assumes the team finishes four to five checkpoints a week. The hours per person per week are still open in the team guide.
   \item CP0 is done, so CP1 is next.
   \item Project deadlines use Vancouver time. The Vancouver clock stays at UTC-7 all year. Boston moves to EST on November 1. After that, Boston is two hours ahead, so 9am in Vancouver is 11am in Boston.
   \item Thanksgiving is Thursday, November 26. That week is planned light.
@@ -254,7 +254,7 @@ Mon Dec 14, 1--3pm & Final Project presentations & 3--5pm Boston \\
 \toprule
 \textbf{Week} & \textbf{Dates} & \textbf{Phase} & \textbf{Checkpoints} & \textbf{Milestone} \\
 \midrule
-1 & Oct 29--Nov 1 & Core & CP1, CP2, CP3, CP7, in parallel (4 days) & \\
+1 & Oct 29--Nov 1 & Core & CP1, CP2, CP3, CP7, in parallel (4 days). Three people, so one takes two. & \\
 2 & Nov 2--8      & Core, then protocol & CP4--CP6, CP8, CP9 & A: Nov 8 \\
 3 & Nov 9--15     & Protocol & CP10--CP14 & B: Nov 15, Gate 1 \\
 4 & Nov 16--22    & First bug & CP15--CP17, CP22, and Project Liftoff & Liftoff due Nov 23 \\
@@ -285,7 +285,7 @@ Mon Dec 14, 1--3pm & Final Project presentations & 3--5pm Boston \\
 \lbl{Decide first}
 \begin{asks}
   \item What are the module path and the repo name?
-  \item Apache-2.0 or MIT? Apache-2.0 adds a patent grant. Both are common for developer tools.
+  \item Which license? Decided: MIT, because it is simple and permissive.
   \item Read the repository layout in \code{docs/design.md}. Can you say what each folder is for, in one sentence each?
 \end{asks}
 
@@ -384,7 +384,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 
 \lbl{Decide first}
 \begin{asks}
-  \item One generator for everything, or one child stream per purpose, like network, faults, workload, and each node?
+  \item One generator for everything, or one child stream per purpose, like network, faults, workload, and each floret?
   \item If you add a new fault type later, should every old seed's network delays change? Let your answer pick the design.
   \item How do you turn the master seed plus a name like ``network'' into a child seed, the same way on every machine?
 \end{asks}
@@ -415,14 +415,14 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 
 \lbl{Decide first}
 \begin{asks}
-  \item What does a handler receive, and what may it do? Can it call another node directly, or only schedule events?
+  \item What does a handler receive, and what may it do? Can it call another floret directly, or only schedule events?
   \item When does a run stop? List every reason.
-  \item Where do test nodes live for now?
+  \item Where do test florets live for now?
 \end{asks}
 
 \lbl{Tests first}
 \begin{checks}
-  \item Two fake nodes play ping-pong ten times.
+  \item Two fake florets play ping-pong ten times.
   \item The final virtual time equals the sum of the delays you set.
   \item Scheduling an event in the past is refused.
   \item The run stops at its time limit.
@@ -467,7 +467,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 \subsection{CP6: Simulated network}
 \when{Week of November 2}
 
-\lbl{Goal} Messages between nodes travel through Diaspore with a seeded delay.
+\lbl{Goal} Messages between florets travel through Diaspore with a seeded delay.
 
 \lbl{Why} The network causes most distributed bugs, so Diaspore must control it.
 
@@ -502,7 +502,7 @@ One rule holds for the whole phase: no goroutines and no real clock in the core.
 
 \section{Phase 2: Real processes and the protocol}
 
-Now nodes become real programs. The protocol is the product, so it gets written down first.
+Now florets become real programs. The protocol is the product, so it gets written down first.
 
 \subsection{CP7: Protocol spec v1}
 \when{October 29 to November 1}
@@ -516,8 +516,8 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \lbl{Decide first}
 \begin{asks}
   \item Start from the draft in Appendix~\ref{app:protocol}. What would you change?
-  \item How does a node learn the protocol version? What happens on a mismatch?
-  \item Which reply fields are required? What should a node do with an event type it does not know?
+  \item How does a floret learn the protocol version? What happens on a mismatch?
+  \item Which reply fields are required? What should a floret do with an event type it does not know?
 \end{asks}
 
 \lbl{Tests first}
@@ -536,9 +536,9 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \subsection{CP8: Talking to one process}
 \when{Week of November 2}
 
-\lbl{Goal} Start a node program, send it \code{init}, and read its reply.
+\lbl{Goal} Start a floret program, send it \code{init}, and read its reply.
 
-\lbl{Why} Nodes are separate programs, so Diaspore drives them through pipes.
+\lbl{Why} Florets are separate programs, so Diaspore drives them through pipes.
 
 \lbl{Learn} A pipe literally means a one-way stream of bytes between two programs. A program reads from its stdin and writes to its stdout.
 
@@ -546,14 +546,14 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \begin{asks}
   \item Who owns the process and its pipes? What gets closed, and when?
   \item How do you read exactly one JSON line? What if a line is very long?
-  \item Where do node logs go, so stdout stays clean for the protocol?
+  \item Where do floret logs go, so stdout stays clean for the protocol?
 \end{asks}
 
 \lbl{Tests first}
 \begin{checks}
-  \item A tiny raw test node, written in Go with no SDK, answers \code{init}.
-  \item A node that prints garbage gives a clear error.
-  \item A node that exits early gives a clear error.
+  \item A tiny raw test floret, written in Go with no SDK, answers \code{init}.
+  \item A floret that prints garbage gives a clear error.
+  \item A floret that exits early gives a clear error.
 \end{checks}
 
 \lbl{Done when}
@@ -582,9 +582,9 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 
 \lbl{Tests first}
 \begin{checks}
-  \item Three test nodes pass a message around a ring.
+  \item Three test florets pass a message around a ring.
   \item Twenty runs of one seed give one hash.
-  \item A node that never replies trips the watchdog with a clear message.
+  \item A floret that never replies trips the watchdog with a clear message.
 \end{checks}
 
 \lbl{Done when}
@@ -598,7 +598,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \subsection{CP10: Timers}
 \when{Week of November 9}
 
-\lbl{Goal} Nodes can set and cancel timers.
+\lbl{Goal} Florets can set and cancel timers.
 
 \lbl{Why} Heartbeats, retries, and election timeouts all need timers.
 
@@ -614,7 +614,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
   \item A timer fires exactly at the current time plus its delay.
   \item Canceling stops it from firing.
   \item Setting it again moves it.
-  \item A node with a 100 ms heartbeat, run for one second, sends the number of heartbeats you predicted on paper.
+  \item A floret with a 100 ms heartbeat, run for one second, sends the number of heartbeats you predicted on paper.
 \end{checks}
 
 \lbl{Done when}
@@ -625,7 +625,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 \subsection{CP11: Storage, crash, and restart}
 \when{Week of November 9}
 
-\lbl{Goal} Nodes can save state that survives a crash.
+\lbl{Goal} Florets can save state that survives a crash.
 
 \lbl{Why} Many real bugs appear only after a crash and a restart.
 
@@ -633,15 +633,15 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 
 \lbl{Decide first}
 \begin{asks}
-  \item What does Diaspore keep for each node's storage? One sentence.
+  \item What does Diaspore keep for each floret's storage? One sentence.
   \item Does \code{store} merge keys, or replace everything?
-  \item On a crash, what happens to messages already on their way to that node? To its timers?
+  \item On a crash, what happens to messages already on their way to that floret? To its timers?
   \item On restart, start a fresh process or reuse the old one? Which is more honest?
 \end{asks}
 
 \lbl{Tests first}
 \begin{checks}
-  \item A counter node crashes, restarts, and continues from its stored value.
+  \item A counter floret crashes, restarts, and continues from its stored value.
   \item Messages and timers behave the way you decided.
   \item Crash and restart show up in the trace.
 \end{checks}
@@ -656,7 +656,7 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 
 \lbl{Goal} A command that runs one seed twice and compares the results.
 
-\lbl{Why} In any language, a node can break determinism by accident. This catches it.
+\lbl{Why} In any language, a floret can break determinism by accident. This catches it.
 
 \lbl{Decide first}
 \begin{asks}
@@ -667,8 +667,8 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 
 \lbl{Tests first}
 \begin{checks}
-  \item A well-behaved node passes.
-  \item A node that reads the real clock fails, and the report points at the first differing line.
+  \item A well-behaved floret passes.
+  \item A floret that reads the real clock fails, and the report points at the first differing line.
 \end{checks}
 
 \lbl{Done when}
@@ -678,9 +678,9 @@ Now nodes become real programs. The protocol is the product, so it gets written 
 
 \begin{milestone}{Milestone B --- Sunday, November 15: Real processes in lockstep (Gate 1)}
 \begin{checks}
-  \item Real node processes run in lockstep, with timers.
+  \item Real floret processes run in lockstep, with timers.
   \item Crash and restart work, with storage.
-  \item \code{check-determinism} catches a bad node.
+  \item \code{check-determinism} catches a bad floret.
   \item Publish blog post 1.
 \end{checks}
 If this is not working, drop bonus items B2 to B5 now. CP24 stays, with its smaller fallback.
@@ -749,11 +749,11 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \subsection{CP15: Crash schedule and partitions}
 \when{Week of November 16}
 
-\lbl{Goal} Crash nodes on a seeded schedule, and split the network into groups.
+\lbl{Goal} Crash florets on a seeded schedule, and split the network into groups.
 
 \lbl{Why} Crashes and partitions are where replication bugs live.
 
-\lbl{Learn} A network partition literally means some nodes cannot reach others for a while.
+\lbl{Learn} A network partition literally means some florets cannot reach others for a while.
 
 \lbl{Decide first}
 \begin{asks}
@@ -802,10 +802,10 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
   \item \code{history.jsonl} is written for every run.
 \end{checks}
 
-\subsection{CP17: Example key-value node with a planted bug}
+\subsection{CP17: Example key-value floret with a planted bug}
 \when{Week of November 16}
 
-\lbl{Goal} A small replicated key-value node in Go, speaking raw JSON with no SDK.
+\lbl{Goal} A small replicated key-value floret in Go, speaking raw JSON with no SDK.
 
 \lbl{Why} Diaspore needs a real target, and a known bug proves the tool works.
 
@@ -813,13 +813,13 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \begin{asks}
   \item Describe the replication design in three sentences.
   \item Pick the planted bug. Choose one that only shows up under a crash plus unlucky timing.
-  \item How does each node know which one is the primary?
+  \item How does each floret know which one is the primary?
 \end{asks}
 
 \lbl{Tests first}
 \begin{checks}
   \item With no faults, every write can be read back.
-  \item The node passes \code{check-determinism}.
+  \item The floret passes \code{check-determinism}.
 \end{checks}
 
 \lbl{Done when}
@@ -865,7 +865,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \lbl{Decide first}
 \begin{asks}
   \item What must a \code{.pappus} file hold to stand alone? Start from Appendix~\ref{app:files}.
-  \item If the node program changed since the file was made: warn, or refuse?
+  \item If the floret program changed since the file was made: warn, or refuse?
   \item Should a sweep stop at the first failure, or collect all of them?
 \end{asks}
 
@@ -873,7 +873,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \begin{checks}
   \item Writing and then reading a \code{.pappus} file gives back the same content.
   \item Replay gives the same trace hash as the original run.
-  \item Replay warns when the node program changed.
+  \item Replay warns when the floret program changed.
 \end{checks}
 
 \lbl{Done when}
@@ -906,7 +906,7 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \begin{asks}
   \item Parallelism lives between seeds, never inside one run. Why?
   \item How many workers? How are results collected? How do all workers stop at the first failure?
-  \item What will you measure? At least: seeds per second against worker count, events per second per run, and time spent waiting on node processes.
+  \item What will you measure? At least: seeds per second against worker count, events per second per run, and time spent waiting on floret processes.
 \end{asks}
 
 \lbl{Tests first}
@@ -951,10 +951,10 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 
 \lbl{Go you will meet} \code{github.com/anishathalye/porcupine}.
 
-\subsection{CP22: One tiny raw node in another language}
+\subsection{CP22: One tiny raw floret in another language}
 \when{Week of November 16}
 
-\lbl{Goal} Prove ``any language'' with a small node written outside Go.
+\lbl{Goal} Prove ``any language'' with a small floret written outside Go.
 
 \lbl{Why} Without it, the honest wording is only ``designed for any language.''
 
@@ -962,13 +962,13 @@ By the end of this phase, a sweep finds the planted bug and a \code{.pappus} fil
 \begin{asks}
   \item JavaScript or Python?
   \item What are that language's determinism traps? Python randomizes string hashing per process. JavaScript's \code{Math.random} cannot be seeded.
-  \item How will Diaspore set up each node's environment to avoid those traps?
+  \item How will Diaspore set up each floret's environment to avoid those traps?
 \end{asks}
 
 \lbl{Tests first}
 \begin{checks}
-  \item The node passes \code{check-determinism}.
-  \item It runs in one cluster alongside Go nodes.
+  \item The floret passes \code{check-determinism}.
+  \item It runs in one cluster alongside Go florets.
 \end{checks}
 
 \lbl{Done when}
@@ -1052,7 +1052,7 @@ B1 moved into the must-haves as CP24, so the bonus items start at B2. Do these i
 
 \subsection{B2: HTML timeline viewer}
 
-One static HTML file that reads \code{trace.jsonl} and draws which node sent what, and when.
+One static HTML file that reads \code{trace.jsonl} and draws which floret sent what, and when.
 
 \subsection{B3: GitHub Action}
 
@@ -1068,7 +1068,7 @@ A thin floret around etcd's Raft library. The library has no clock or network of
 
 \begin{asks}
   \item How do \code{init}, \code{message}, and \code{timer} events turn into Raft's \code{Tick} and \code{Step} calls?
-  \item What must go into \code{store} so a restarted node recovers correctly?
+  \item What must go into \code{store} so a restarted floret recovers correctly?
   \item The library is well tested. If a sweep fails, is the bug in Raft or in your wrapper? How do you tell?
 \end{asks}
 
@@ -1132,7 +1132,7 @@ Also publish blog post 3.
   \item[Invariant] A rule that must always stay true.
   \item[Linearizability] Every operation looks like it happened at one instant between its start and its end.
   \item[Lockstep] One step at a time, together, never ahead.
-  \item[Network partition] Some nodes cannot reach others for a while.
+  \item[Network partition] Some florets cannot reach others for a while.
   \item[.pappus] Diaspore's replay file: the seed, the setup, and the failure in one place.
   \item[Pipe] A one-way stream of bytes between two programs.
   \item[Raft] A set of rules for a group of servers to agree on one ordered list of changes, even when some crash.
@@ -1142,7 +1142,7 @@ Also publish blog post 3.
   \item[Seed] The one number that decides every random choice in a run.
   \item[Trace] The list of every event in a run.
   \item[Virtual time] Time as a number the simulator owns.
-  \item[Watchdog] A real-time timer that stops a run if a node hangs.
+  \item[Watchdog] A real-time timer that stops a run if a floret hangs.
 \end{description}
 
 \appendix
@@ -1150,9 +1150,9 @@ Also publish blog post 3.
 \section{Protocol v1 draft}
 \label{app:protocol}
 
-This is the starting point for CP7, not the final spec. Each line is one JSON object, and every event gets exactly one reply.
+This is the starting point for CP7, not the final spec. Each line is one JSON object, and every event gets exactly one reply. The field names still say node, as in \code{node} and \code{nodes}. CP7 and CP13 decide whether they become floret names.
 
-\subsection{Events: Diaspore to node}
+\subsection{Events: Diaspore to floret}
 
 Start or restart:
 
@@ -1172,13 +1172,13 @@ A timer fires:
 {"type": "timer", "time": 1750, "id": "election"}
 \end{lstlisting}
 
-\subsection{Reply: node to Diaspore}
+\subsection{Reply: floret to Diaspore}
 
 \begin{lstlisting}[style=json]
 {"type": "done", "send": [{"to": "n2", "body": {"op": "ack"}}], "set_timers": [{"id": "election", "after": 500}], "cancel_timers": ["heartbeat"], "store": {"term": "3"}, "log": ["became leader"]}
 \end{lstlisting}
 
-\subsection{Rules every node must follow}
+\subsection{Rules every floret must follow}
 
 \begin{itemize}
   \item Do work only inside the handler for the current event.
@@ -1188,11 +1188,11 @@ A timer fires:
   \item Keep anything that must survive a crash in \code{store}.
 \end{itemize}
 
-\subsection{Crashes and hung nodes}
+\subsection{Crashes and hung florets}
 
-A crash kills the node process, so its memory is gone. A restart starts a new process and sends \code{init} with \code{stored} filled in.
+A crash kills the floret process, so its memory is gone. A restart starts a new process and sends \code{init} with \code{stored} filled in.
 
-If a node does not reply, a real-time watchdog stops the run and reports it. The watchdog only detects hangs. It never affects the simulation.
+If a floret does not reply, a real-time watchdog stops the run and reports it. The watchdog only detects hangs. It never affects the simulation.
 
 \clearpage
 \section{File drafts}
@@ -1229,6 +1229,7 @@ run:
 {
   "pappus": 1,
   "diaspore": "0.1.0",
+  "protocol": 1,
   "seed": 48213,
   "config": {},
   "nodes": {"kv": {"command": "./kvnode", "sha256": "..."}},
@@ -1237,7 +1238,7 @@ run:
 }
 \end{lstlisting}
 
-The \code{config} field holds the full resolved setup, so the file stands alone. The node hash warns you if the code changed since the bug was found.
+The \code{config} field holds the full resolved setup, so the file stands alone. The floret hash warns you if the code changed since the bug was found.
 
 \section{Honest claims}
 \label{app:claims}
@@ -1250,9 +1251,9 @@ The \code{config} field holds the full resolved setup, so the file stands alone.
 \textbf{Do not say} & \textbf{Say instead} \\
 \midrule
 ``The first DST tool for any language'' & ``Inspired by FoundationDB, TigerBeetle, and Maelstrom'' \\
-``Fully deterministic'' & ``Deterministic when nodes follow the protocol rules, checked by trace hashes'' \\
+``Fully deterministic'' & ``Deterministic when florets follow the protocol rules, checked by trace hashes'' \\
 ``Supports any language'' (before CP22) & ``Designed for any language'' \\
-``Test any service'' & ``Test nodes written against the Diaspore protocol'' \\
+``Test any service'' & ``Test florets written against the Diaspore protocol'' \\
 ``Finds real production bugs'' & ``Found the bug planted in the example,'' until it truly finds others \\
 ``Works with real systems'' & ``Runs etcd's Raft library through a thin floret,'' only once B5 works \\
 ``Wraps any program'' & ``Wrapping unmodified programs is future work'' \\
