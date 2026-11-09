@@ -1,10 +1,10 @@
 # Diaspore Design
 
-Version 0.1, September 23, 2026.
+Version 0.2, November 9, 2026.
 
 The features in this document are fixed. How each piece works inside is decided during the build,
-one checkpoint at a time, and recorded in the decisions log of the build guide. Where a detail is
-left to a checkpoint, this document says so.
+one checkpoint at a time, and recorded in the pull request for that checkpoint. A bigger decision
+becomes an ADR in `docs/adr/`. Where a detail is left to a checkpoint, this document says so.
 
 Vocabulary follows [`naming.md`](naming.md).
 
@@ -13,7 +13,7 @@ Vocabulary follows [`naming.md`](naming.md).
 ## 1. Goal
 
 Make distributed bugs reproducible. Every source of randomness in a run comes from one seed, so a
-failing run replays exactly, on any machine.
+failing run replays exactly, on any machine, as long as the florets follow the rules in section 12.
 
 ---
 
@@ -25,7 +25,9 @@ failing run replays exactly, on any machine.
 - **The capitulum** is the set of florets in one run, plus everything Diaspore tracks about them.
 - **Checkers** read what clients asked and got back, and decide whether a rule was broken.
 - **A pappus** is the replay file written when a checker fails.
-- **The dandelion** runs many seeds in parallel.
+- **The dandelion** runs many seeds in parallel, on one machine or across many.
+- **A coordinator and its workers** spread a dandelion across machines (CP24). The coordinator hands
+  out seed ranges and collects the failures. Each worker runs the seeds it is given.
 
 ---
 
@@ -55,8 +57,9 @@ build guide.
 Diaspore sends one event to one floret, then waits for the reply before anything else happens.
 Only one floret is ever running.
 
-That is what keeps two runs of the same seed identical. Nothing can race, whatever language the
-florets are written in.
+That is what keeps two runs of the same seed identical. Diaspore itself has nothing that can race,
+and a floret that follows the rules in section 12 cannot race either, whatever language it is
+written in.
 
 The cost is speed, since every event is a round trip to another process. That cost is accepted
 for v0.1, and measured as part of the scaling results.
@@ -145,6 +148,9 @@ A pappus stands alone. Anyone with the file and the same floret programs can rep
 | `diaspore replay <file.pappus>` | Reproduce a run and verify its trace hash |
 | `diaspore check-determinism --seed <n>` | Run one seed twice and point to the first difference |
 
+A dandelion across machines also needs a way to start a coordinator and its workers. How they are
+started is decided in CP24.
+
 ---
 
 ## 12. The determinism contract
@@ -162,7 +168,7 @@ A pappus stands alone. Anyone with the file and the same floret programs can rep
 - Never read the real clock.
 - Never use global randomness.
 - Never run goroutines inside the event loop. Goroutines are allowed only in the process driver,
-  and between separate seeds in the dandelion.
+  and in the dandelion: between separate seeds, and in the coordinator and workers.
 
 Diaspore cannot stop a floret from breaking its rules, but it can catch it.
 `check-determinism` runs a seed twice and compares the traces byte for byte. CI runs it on every
@@ -172,16 +178,25 @@ commit.
 
 ## 13. Scalability
 
-The dandelion runs seeds in parallel across CPU cores. Each run stays single-threaded inside.
+The dandelion scales up and out. Each run stays single-threaded inside, and parallelism lives
+between seeds.
+
+- **Up:** many seeds in parallel across the CPU cores of one machine (CP20).
+- **Out:** a coordinator hands out seed ranges to workers on other machines, collects the
+  failures, and gives a dead worker's seeds to another worker (CP24). Re-running a seed is safe,
+  because the same seed always gives the same run.
 
 The report measures:
 
-- Seeds per second against worker count, for 1, 2, 4, and 8 workers.
+- Seeds per second against worker count, for 1, 2, 4, and 8 workers on one machine.
+- Seeds per second against worker count across machines, and the cost of handing out work.
 - Events per second within one run.
 - Time spent waiting on floret processes.
 - How the cost of a run grows with the number of florets.
+- Where scaling stops: the coordinator, the network, or the lockstep round trip to each floret.
 
-Running across many machines is bonus B1.
+A few workers show a trend and a bottleneck. They do not prove internet scale, and the report does
+not claim it.
 
 ---
 
@@ -240,7 +255,10 @@ diaspore/
 │   │   ├── ackedwrites.go           CP18
 │   │   └── linearizable.go          CP21
 │   ├── pappus/pappus.go             CP19
-│   └── dandelion/sweep.go           CP19, parallel in CP20
+│   └── dandelion/
+│       ├── sweep.go                 CP19, parallel in CP20
+│       ├── coordinator.go           CP24
+│       └── worker.go                CP24
 ├── schema/
 │   ├── event.schema.json            CP7
 │   └── reply.schema.json            CP7
@@ -262,7 +280,9 @@ diaspore/
 │   ├── design.md
 │   ├── plan.md
 │   ├── naming.md
-│   └── findings.md
+│   ├── brand-guide.md
+│   ├── findings.md
+│   └── adr/                         larger decisions, one file each
 └── runs/                            run outputs, listed in .gitignore
 ```
 
@@ -274,6 +294,7 @@ Notes:
 - `examples/kv` imports nothing from `internal/`, so it proves the raw protocol works on its own.
 - `second-floret/` gets renamed once its language is locked.
 - The types and functions inside each file are designed during the checkpoints.
+- Where the coordinator and worker start from the command line is decided in CP24.
 
 ---
 
@@ -289,7 +310,8 @@ Notes:
 | Lockstep, one event at a time | The only way to keep runs exact across separate processes |
 | A simulated network, not real TCP | Full control. Real TCP timing can never be replayed. |
 | MIT license | Simple and permissive |
-| Every must-have ships, with no cuts | The gates in the plan only ever drop bonus items |
+| Every must-have ships. Only CP24 has a smaller fallback | The gates in the plan only drop bonus items, except that Gate 2 can shrink CP24 and keep dead-worker recovery |
+| Dandelion across machines is a must-have (CP24) | One machine only shows scaling up. Scaling out is the part of Diaspore that is itself a distributed system. |
 
 ---
 
@@ -300,20 +322,23 @@ Lock these before the build reaches them:
 | Choice | Options | Needed by |
 |---|---|---|
 | Language of the second floret | Python or JavaScript | CP22 |
+| How workers talk to the coordinator | `net/http` or `net/rpc` | CP24 design |
+| Where workers run | Laptops, cloud instances, or containers. Only separate machines count as scaling out. | CP24 design |
 | How people install Diaspore | `go install`, release binaries, or both | CP23 |
 
 ---
 
 ## 18. Outside v0.1
 
-**Bonus, in order:** the dandelion across machines, an HTML timeline viewer, a GitHub Action, and
-an optional Go SDK.
+**Bonus, in order, only if Milestone D lands early:** B2 an HTML timeline viewer, B3 a GitHub
+Action, B4 an optional Go SDK, and B5 etcd's Raft library wrapped as a floret. The dandelion across
+machines is no longer bonus. It moved into the must-haves as CP24.
 
 **Not now:** a live production runtime, disk faults, clock skew, shrinking failing runs, and
 binary encodings.
 
 **Later failure classes.** These fit the building-block design, so they can come after the
-course, from you or the community.
+course, from us or the community.
 
 | Failure class | What it means | How Diaspore could inject it |
 |---|---|---|

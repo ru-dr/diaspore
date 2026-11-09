@@ -25,7 +25,7 @@ hundred times, fails once, passes again, and you never learn whether the defect 
 merely avoided.
 
 Diaspore pulls every source of that randomness into one place and drives it from a single seed.
-Same seed, same execution, every time. A bug stops being an anecdote and becomes an address.
+Same seed, same execution, as long as the florets follow the rules below. A bug stops being an anecdote and becomes an address.
 
 > **Status:** in development. Nothing below works yet. This README describes the v0.1 target,
 > and the [plan](docs/plan.md) tracks progress.
@@ -49,7 +49,7 @@ Diaspore owns everything a floret would normally get from the outside world:
 - **Client load** comes from the same seeded scheduler, so the workload replays too.
 
 All of it is driven by one seed. Diaspore sends one event to one floret, waits for its reply,
-and only then moves on. Nothing races, so nothing can differ between two runs.
+and only then moves on. Nothing races, so nothing can differ between two runs of a floret that follows the rules.
 
 ```
       diaspore.yaml + seed
@@ -181,15 +181,17 @@ functions, and `PROTOCOL.md` will list the known ones.
 - An example replicated key-value floret in Go, with one planted bug
 - One small floret in a second language
 - `run`, `dandelion` across all CPU cores, `replay`, `check-determinism`
+- `dandelion` across machines: a coordinator hands out seed ranges to workers, and survives a
+  dead worker
 - `.pappus` v1
-- Scaling measurements for sweeps
+- Scaling measurements for sweeps, on one machine and across machines
 
 **Later**
 
-- `dandelion` across many machines
 - An HTML timeline viewer for traces
 - A GitHub Action that fails a pull request and attaches the `.pappus` file
 - An optional Go SDK
+- etcd's Raft library, wrapped as a floret
 
 **Not planned for now:** a live production runtime, disk faults, clock skew, shrinking failing
 runs, and binary encodings.
@@ -233,6 +235,7 @@ The full reference, including terms deliberately rejected, is in
 |---|---|
 | [`docs/design.md`](docs/design.md) | The pieces, the event model, the decisions, and why |
 | [`docs/plan.md`](docs/plan.md) | Schedule, checkpoint tracker, milestones, and gates |
+| [`docs/build-guide.pdf`](docs/build-guide.pdf) | Every checkpoint, with its goal, tests, and done-when list |
 | [`docs/naming.md`](docs/naming.md) | Naming reference, including terms deliberately rejected |
 | [`docs/brand-guide.md`](docs/brand-guide.md) | Logo, color, gradient, and usage rules, with all brand assets |
 
@@ -257,5 +260,5 @@ MIT. See [LICENSE](LICENSE).
 ---
 
 <div align="center">
-<sub>Built for CS 6650 (Building Scalable Distributed Systems) at Northeastern University, Fall 2026.</sub>
+<sub>Built for CS 6650 (Building Scalable Distributed Systems) at Northeastern University, Fall 2026, by a team of three.</sub>
 </div>

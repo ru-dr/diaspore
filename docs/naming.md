@@ -13,9 +13,9 @@ Keep this open while writing code.
 |---|---|---|
 | **Diaspore** | Any part of a plant that disperses and grows a new plant | The project and the binary |
 | **Capitulum** | The flower head that holds many small florets | The set of florets in one run |
-| **Floret** | One of the small flowers in the head | A node: a program that speaks the Diaspore protocol |
+| **Floret** | One of the small flowers in the head | A node: a program that speaks the Diaspore protocol. Say floret, not node. |
 | **Pappus** | The fluffy parachute that carries a seed | The replay file, with the `.pappus` extension |
-| **Dandelion** | The whole plant, scattering thousands of seeds at once | The parallel seed sweep |
+| **Dandelion** | The whole plant, scattering thousands of seeds at once | The seed sweep, on one machine or across many |
 
 Plurals are **florets** and **capitula**. Never "capitulums."
 
@@ -65,6 +65,13 @@ Each was considered and rejected. Do not reach for them later.
 
 ---
 
+## Plain words that are not terms
+
+The sweep across machines (CP24) has a **coordinator** and **workers**. These are plain English,
+not botanical terms, so they do not count as a sixth term. Use them as written.
+
+---
+
 ## Before adding a sixth term
 
 All three must be true, or use a plain English name instead:
@@ -81,5 +88,5 @@ have to memorize.
 ## Package and type names
 
 Package names are set in the repository layout in [`design.md`](design.md). Type and function
-names are yours to choose during the checkpoints. Use this vocabulary when you name them, and
+names are chosen by the owner of each checkpoint. Use this vocabulary when you name them, and
 follow the test above for anything new.

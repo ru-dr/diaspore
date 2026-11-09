@@ -35,7 +35,7 @@
 
 \title{\textbf{Diaspore Team Guide}\\[0.3em]\large CS 6650 final project}
 \author{The Diaspore team}
-\date{Version 0.2, October 29, 2026}
+\date{Version 0.3, November 9, 2026}
 
 \begin{document}
 
@@ -198,11 +198,11 @@ If you write code in the core, treat these rules as hard limits.
 
 \section{The plan}
 
-Work starts today, Thursday, October 29, 2026, and ends on December 14. The checkpoint details in \code{docs/build-guide.pdf} (Goal, Why, Decide first, Tests first, Done when) are the source of truth. Replace the copy in the repo with the new version. \code{docs/plan.md} still shows the old dates. Use the calendar below until it is updated.
+Work started on Thursday, October 29, 2026, and ends on December 14. The team is three people. The checkpoint details in \code{docs/build-guide.pdf} (Goal, Why, Decide first, Tests first, Done when) are the source of truth. Replace the copy in the repo with the new version. \code{docs/plan.md} still shows the old dates. Use the calendar below until it is updated.
 
 \lbl{Starting point:} CP0 is done, and CP1 is next. \fillin{confirm the last finished checkpoint}
 
-\lbl{Work left:} CP1 to CP24. At 2 to 4 hours each, that is about 48 to 96 hours for the team. CP24 is bigger than most, so plan the high end for it. Hours per person per week: \fillin{hours}
+\lbl{Work left:} CP1 to CP24. At 2 to 4 hours each, that is about 48 to 96 hours for the team, or 16 to 32 hours for each of the three of us. CP24 is bigger than most, so plan the high end for it. Hours per person per week: \fillin{hours}
 
 \subsection*{Project deadlines}
 
@@ -255,7 +255,7 @@ Draft the Project Proposal and Team Charter by Wednesday, November 18, and submi
 
 \lbl{Gate 2 (Dec 6).} If Milestone D is not done, shrink CP24 but keep its core: the coordinator re-sends a dead worker's seeds to another worker. Drop workers joining in the middle of a sweep, and tuning the range sizes. Dead-worker recovery is the last thing to cut. If it is cut, we write it up as a limit. Every other must-have ships in full.
 
-\lbl{Why this can work.} CP1, CP2, CP3, and CP7 do not depend on each other, so four people can start at the same time. CP24 only needs single runs and the \code{.pappus} file, so its design can start in week 5.
+\lbl{Why this can work.} CP1, CP2, CP3, and CP7 do not depend on each other, so all three of us can start at the same time, with one person taking two of them. CP24 only needs single runs and the \code{.pappus} file, so its design can start in week 5.
 
 \section{Repo and how we work}
 
@@ -376,7 +376,9 @@ Report, demo, poster, blog posts & Wrap-up & 7 & Results from the areas above & 
 \end{tabularx}
 \end{center}
 
-\lbl{A starting split for four people.} One person takes the core (CP1 to CP6). One takes the protocol and the process driver (CP7 to CP12). One takes workload, history, checkers, and the example floret. One takes the dandelion, then CP24, then the scaling experiments. The fourth area has the most risk, so the others should help with it in week 6.
+\lbl{A starting split for three people.} Person 1 takes the core and network: CP1, CP2, CP4, CP5, CP6, CP14, and CP15, then the design and build of CP24. Person 2 takes the protocol and the process driver: CP7 to CP12, then CP21, CP22, and CP23. Person 3 takes the seed, config, workload, example floret, checker, and sweep: CP3, CP13, CP16, CP17, CP18, and CP19, then CP20 and the scaling numbers. In week 1, Person 1 takes CP1 and CP2, Person 2 takes CP7, and Person 3 takes CP3.
+
+CP24 has the most risk, so Persons 2 and 3 should help Person 1 with it in week 6. Two machines and four worker processes meet the CP24 minimum, so three people can cover it.
 
 \lbl{Two traps for the second-language floret.} Python randomizes string hashing in each process. JavaScript's \code{Math.random} cannot be seeded. Diaspore has to set up each floret's environment to avoid these.
 

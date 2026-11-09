@@ -2,7 +2,8 @@ package sim
 
 import "errors"
 
-type Time int64 // Time is virtual time in microseconds.
+// Time is virtual time in microseconds.
+type Time int64
 
 var ErrBackward = errors.New("clock cannot move backward")
 
