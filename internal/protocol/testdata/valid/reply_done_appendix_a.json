@@ -1,0 +1,1 @@
+{"type":"done","send":[{"to":"n2","body":{"op":"ack"}}],"set_timers":[{"id":"election","after":500}],"cancel_timers":["heartbeat"],"store":{"term":"3"},"log":["became leader"]}

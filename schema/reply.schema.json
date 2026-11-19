@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Floret reply, protocol v1",
+  "description": "One line a floret writes to stdout for each event. See PROTOCOL.md section 5. Unknown fields are rejected, so typos fail loudly.",
+  "type": "object",
+  "required": ["type"],
+  "additionalProperties": false,
+  "properties": {
+    "type": { "const": "done" },
+    "protocol": {
+      "description": "Required in the reply to init. Diaspore checks that in Go, since a schema cannot see which event a reply answers.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "send": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["to", "body"],
+        "additionalProperties": false,
+        "properties": {
+          "to": { "$ref": "#/$defs/name" },
+          "body": { "type": "object" }
+        }
+      }
+    },
+    "set_timers": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "after"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "$ref": "#/$defs/name" },
+          "after": {
+            "description": "Microseconds from now. At least 1, so virtual time always moves forward.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        }
+      }
+    },
+    "cancel_timers": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/name" }
+    },
+    "store": {
+      "description": "Merged into saved state. A null value deletes that key.",
+      "type": "object",
+      "additionalProperties": { "type": ["string", "null"] }
+    },
+    "log": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "$defs": {
+    "name": {
+      "description": "A node, client, or timer name.",
+      "type": "string",
+      "minLength": 1
+    }
+  }
+}
