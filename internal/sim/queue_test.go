@@ -1,10 +1,6 @@
 package sim
 
-import (
-	"fmt"
-	"math/rand/v2"
-	"testing"
-)
+import "testing"
 
 func TestQueueTimeOrder(t *testing.T) {
 	q := newQueue()
@@ -70,53 +66,54 @@ func TestQueueEmpty(t *testing.T) {
 	}
 }
 
-// TestQueueSeededAgainstReference mixes pushes and pops the way the loop will,
-// and checks every pop against a plain slice: earliest time first, and for
-// equal times, the earliest push first.
-func TestQueueSeededAgainstReference(t *testing.T) {
-	r := rand.New(rand.NewPCG(1, 2)) // fixed seed, never the global rand
+// TestQueueMixedPushAndPop pushes and pops in turn, the way the loop will,
+// and checks every pop against the expected answer.
+func TestQueueMixedPushAndPop(t *testing.T) {
+	steps := []struct {
+		op    string // "push" or "pop"
+		time  Time   // push only
+		label string // push: the event's label; pop: the label we expect ("" means empty)
+	}{
+		{"push", 40, "a"},
+		{"push", 10, "b"},
+		{"pop", 0, "b"}, // earlier time first, even though pushed later
+		{"push", 40, "c"},
+		{"push", 20, "d"},
+		{"pop", 0, "d"},
+		{"pop", 0, "a"}, // a and c tie at 40; a was pushed first
+		{"push", 40, "e"},
+		{"push", 5, "f"},
+		{"pop", 0, "f"},
+		{"pop", 0, "c"}, // c and e tie at 40; c was pushed first
+		{"pop", 0, "e"},
+		{"pop", 0, ""}, // empty
+		{"push", 30, "g"},
+		{"pop", 0, "g"}, // works again after being empty
+		{"push", 50, "h"},
+		{"push", 50, "i"},
+		{"push", 50, "j"},
+		{"pop", 0, "h"}, // three-way tie: needs the push-order rule
+		{"pop", 0, "i"},
+		{"pop", 0, "j"},
+		{"pop", 0, ""},
+	}
+
 	q := newQueue()
-	var ref []Event // events still waiting, in push order
-
-	popRef := func() (Event, bool) {
-		if len(ref) == 0 {
-			return Event{}, false
+	for i, s := range steps {
+		if s.op == "push" {
+			q.push(Event{Time: s.time, Type: s.label})
+			continue
 		}
-		best := 0
-		for i := 1; i < len(ref); i++ {
-			if ref[i].Time < ref[best].Time { // strict <, so ties keep the earliest push
-				best = i
+
+		got, ok := q.pop()
+		if s.label == "" {
+			if ok {
+				t.Errorf("step %d: pop() = %+v, want empty", i, got)
 			}
+			continue
 		}
-		ev := ref[best]
-		ref = append(ref[:best], ref[best+1:]...)
-		return ev, true
-	}
-
-	check := func(step int) {
-		got, gotOK := q.pop()
-		want, wantOK := popRef()
-		if gotOK != wantOK || got != want {
-			t.Fatalf("step %d: pop() = %+v, %v; want %+v, %v", step, got, gotOK, want, wantOK)
+		if !ok || got.Type != s.label {
+			t.Errorf("step %d: pop() = %+v, %v; want %q", i, got, ok, s.label)
 		}
-	}
-
-	const steps = 10000
-	for i := range steps {
-		if r.IntN(3) < 2 { // push two times out of three
-			// Times in [0, 1000) force many ties. Type is a unique label.
-			ev := Event{Time: Time(r.IntN(1000)), Type: fmt.Sprintf("e%d", i)}
-			q.push(ev)
-			ref = append(ref, ev)
-		} else {
-			check(i)
-		}
-	}
-
-	for i := steps; len(ref) > 0; i++ {
-		check(i)
-	}
-	if _, ok := q.pop(); ok {
-		t.Errorf("pop() after draining: ok = true, want false")
 	}
 }

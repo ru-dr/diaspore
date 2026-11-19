@@ -2,71 +2,75 @@ package sim
 
 import "container/heap"
 
-// Event is a placeholder until PROTOCOL.md (CP7) defines the real event.
-// Time is set by Diaspore; the queue only reads it.
+// TODO(CP7): Event is a placeholder. Once PROTOCOL.md defines the real event,
+// move it out of this file and have the queue use it, keeping the Time field
+// (or its new name) as the ordering key.
 type Event struct {
-	Time Time   // virtual time the event happens
-	Type string // "init", "message", or "timer" (build guide, Appendix A)
+	Time Time // virtual time the event happens
+	Type string
 }
 
-// item wraps an event with the order it was pushed in.
+// item wraps an event and the order it was pushed in.
 type item struct {
-	ev  Event
-	seq uint64
+	event     Event
+	pushOrder uint64
 }
 
-// itemHeap implements heap.Interface, ordered by event time, then by push order.
+// itemHeap implements heap.Interface, ordered by Event Time, then by pushOrder.
 type itemHeap []item
 
-func (h itemHeap) Len() int { return len(h) }
+func (h itemHeap) Len() int {
+	return len(h)
+}
 
 func (h itemHeap) Less(i, j int) bool {
-	if h[i].ev.Time != h[j].ev.Time {
-		return h[i].ev.Time < h[j].ev.Time
+	if h[i].event.Time != h[j].event.Time {
+		return h[i].event.Time < h[j].event.Time
 	}
-	return h[i].seq < h[j].seq
+	return h[i].pushOrder < h[j].pushOrder
 }
 
-func (h itemHeap) Swap(i, j int) { h[i], h[j] = h[j], h[i] }
+func (h itemHeap) Swap(i, j int) {
+	h[i], h[j] = h[j], h[i]
+}
 
-func (h *itemHeap) Push(x any) { *h = append(*h, x.(item)) }
+func (h *itemHeap) Push(x any) {
+	*h = append(*h, x.(item))
+}
 
 func (h *itemHeap) Pop() any {
-	old := *h
-	n := len(old)
-	it := old[n-1]
-	*h = old[:n-1]
-	return it
+	items := *h
+	n := len(items)
+	last := items[n-1]
+	*h = items[:n-1]
+	return last
 }
 
-// eventQueue always hands back the earliest event. Events with the same
-// time come out in the order they were pushed.
+// eventQueue always hands back the earliest event by Event Time, then by pushOrder.
 type eventQueue struct {
-	items   itemHeap
-	nextSeq uint64
+	items         itemHeap
+	nextPushOrder uint64
 }
 
 func newQueue() *eventQueue {
 	return &eventQueue{}
 }
 
-func (q *eventQueue) push(ev Event) {
-	heap.Push(&q.items, item{ev: ev, seq: q.nextSeq})
-	q.nextSeq++
+func (q *eventQueue) push(event Event) {
+	heap.Push(&q.items, item{event: event, pushOrder: q.nextPushOrder})
+	q.nextPushOrder++
 }
 
-// pop removes and returns the earliest event. It returns false if the queue is empty.
 func (q *eventQueue) pop() (Event, bool) {
 	if len(q.items) == 0 {
 		return Event{}, false
 	}
-	return heap.Pop(&q.items).(item).ev, true
+	return heap.Pop(&q.items).(item).event, true
 }
 
-// peek returns the earliest event without removing it. It returns false if the queue is empty.
 func (q *eventQueue) peek() (Event, bool) {
 	if len(q.items) == 0 {
 		return Event{}, false
 	}
-	return q.items[0].ev, true
+	return q.items[0].event, true
 }
