@@ -27,8 +27,8 @@ merely avoided.
 Diaspore pulls every source of that randomness into one place and drives it from a single seed.
 Same seed, same execution, as long as the florets follow the rules below. A bug stops being an anecdote and becomes an address.
 
-> **Status:** in development. Nothing below works yet. This README describes the v0.1 target,
-> and the [plan](docs/plan.md) tracks progress.
+> **Status:** in development. The seed streams and the virtual clock are built and tested; the
+> rest of this README describes the v0.1 target, and the [plan](docs/plan.md) tracks progress.
 
 ---
 
