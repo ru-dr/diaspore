@@ -214,6 +214,7 @@ pre .st { color: #9CF27A; }
   <button type="button" id="fit">Fit</button>
   <span class="sep"></span>
   <button type="button" id="allLinks" aria-pressed="false">All links</button>
+  <button type="button" id="layoutBtn" title="Arrange the map to fit this screen">Layout: Auto</button>
 </div>
 
 <div class="key" aria-label="Status key">
@@ -285,6 +286,8 @@ function sketchLine(a, b, seed) {
 /* zones: a tinted panel drawn around each group's boxes */
 const zl = document.getElementById("zones");
 const PAD = 46, HEAD = 58;
+function drawZones() {
+zl.textContent = "";
 for (const z of ZONES) {
   const ms = NODES.filter(n => n.g === z.key);
   const x0 = Math.min(...ms.map(n => n.x)) - W / 2 - PAD, x1 = Math.max(...ms.map(n => n.x)) + W / 2 + PAD + (z.key === "florets" ? 14 : 0);
@@ -296,6 +299,7 @@ for (const z of ZONES) {
   const txt = el("text", { x: x0 + 34, y: y0 + 37 }, g);
   txt.textContent = z.label;
   z.size = () => pill.setAttribute("width", txt.getComputedTextLength() + 32);
+}
 }
 
 /* edges */
@@ -310,7 +314,10 @@ function arrowHead(g, tip, from, seed) {
   g.appendChild(sketchLine([tip.x, tip.y], [tip.x - L * Math.cos(ang + s), tip.y - L * Math.sin(ang + s)], seed + 2));
 }
 const edgeLayer = document.getElementById("edges"), labelLayer = document.getElementById("labels");
-const edgeEls = EDGES.map(([from, to, label, o]) => {
+let edgeEls = [];
+function drawEdges() {
+edgeLayer.textContent = ""; labelLayer.textContent = "";
+edgeEls = EDGES.map(([from, to, label, o]) => {
   const { both, dashed, bend, main } = o;
   const a = byId[from], b = byId[to], seed = seedOf(from + to);
   const g = el("g", { class: "edge" + (dashed ? " dashed" : "") + (main ? " main" : "") }, edgeLayer);
@@ -334,6 +341,7 @@ const edgeEls = EDGES.map(([from, to, label, o]) => {
   t.txt.textContent = label;
   return { from, to, g, t, pts, main };
 });
+}
 
 /* edge labels: try spots along each arrow, keep the first that clears other labels and boxes */
 function pointAt(pts, f) {
@@ -395,7 +403,10 @@ function placeLabels() {
 }
 
 /* nodes */
-const nodeLayer = document.getElementById("nodes"), nodeEls = {};
+const nodeLayer = document.getElementById("nodes");
+let nodeEls = {};
+function drawNodes() {
+nodeLayer.textContent = ""; nodeEls = {};
 for (const n of NODES) {
   const g = el("g", { class: "node z-" + n.g, tabindex: "0", role: "button", "aria-label": n.label + ", " + n.sub }, nodeLayer);
   const shape = el("g", { class: "shape" }, g);
@@ -412,6 +423,7 @@ for (const n of NODES) {
   g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(n.id, false); } });
   nodeEls[n.id] = g;
 }
+}
 
 /* camera */
 const cam = { x: 0, y: 0, k: 1 };
@@ -419,8 +431,9 @@ const zoomLabel = document.getElementById("zoomLabel");
 const clampK = k => Math.min(3, Math.max(0.2, k));
 function apply() { view.setAttribute("transform", `translate(${cam.x},${cam.y}) scale(${cam.k})`); zoomLabel.textContent = Math.round(cam.k * 100) + "%"; }
 function zoomAt(px, py, k2) { k2 = clampK(k2); cam.x = px - (px - cam.x) * (k2 / cam.k); cam.y = py - (py - cam.y) * (k2 / cam.k); cam.k = k2; apply(); }
-const B = (() => { const x0 = Math.min(...ZONES.map(z => z.x)), y0 = Math.min(...ZONES.map(z => z.y));
-  return { x: x0, y: y0, w: Math.max(...ZONES.map(z => z.x + z.w)) - x0, h: Math.max(...ZONES.map(z => z.y + z.h)) - y0 }; })();
+let B = { x: 0, y: 0, w: 1, h: 1 };
+function computeBounds() { const x0 = Math.min(...ZONES.map(z => z.x)), y0 = Math.min(...ZONES.map(z => z.y));
+  B = { x: x0, y: y0, w: Math.max(...ZONES.map(z => z.x + z.w)) - x0, h: Math.max(...ZONES.map(z => z.y + z.h)) - y0 }; }
 let anim = 0;
 function animateTo(target) {
   cancelAnimationFrame(anim);
@@ -494,7 +507,8 @@ document.addEventListener("keydown", e => {
   else if (e.key === "0") fit(true);
   else if (e.key === "Escape") closeDrawer();
 });
-addEventListener("resize", () => fit(false));
+addEventListener("resize", () => { clearTimeout(resizeT); resizeT = setTimeout(onResize, 150); });
+let resizeT = 0;
 
 /* light Go/JSON highlighting on escaped text */
 function highlight(src) {
@@ -566,8 +580,80 @@ function closeDrawer() {
   history.replaceState(null, "", location.pathname);
 }
 
-ZONES.forEach(z => z.size()); placeLabels();
-if (document.fonts) document.fonts.ready.then(() => { ZONES.forEach(z => z.size()); placeLabels(); });
+/* auto arrange: zones keep their inside layout and are packed into rows of columns to suit the screen */
+const LAYOUTS = {
+  wide:   [[["input"], ["world"], ["engine"], ["boundary", "florets"], ["verdict", "scale"]]],
+  square: [[["input"], ["world"], ["engine"]], [["verdict", "scale"], ["boundary", "florets"]]],
+  tall:   [[["input"], ["world"]], [["engine"]], [["boundary", "florets"]], [["verdict", "scale"]]]
+};
+const GAPX = 56, GAPY = 70;
+// each zone's boxes, relative to the zone's top-left corner (taken from data.js)
+const zoneShape = {};
+for (const z of ZONES) {
+  const ms = NODES.filter(n => n.g === z.key), extra = z.key === "florets" ? 12 : 0;
+  const minX = Math.min(...ms.map(n => n.x)), minY = Math.min(...ms.map(n => n.y));
+  zoneShape[z.key] = {
+    rel: ms.map(n => ({ n, dx: n.x - minX, dy: n.y - minY })),
+    w: Math.max(...ms.map(n => n.x)) - minX + W + 2 * PAD + (extra ? 14 : 0),
+    h: Math.max(...ms.map(n => n.y)) - minY + H + HEAD + PAD + extra,
+    ox: PAD + W / 2, oy: HEAD + H / 2 + extra
+  };
+}
+function packLayout(rows) {
+  const placed = [];
+  let y = 0, maxW = 0;
+  for (const row of rows) {
+    let x = 0, rowH = 0;
+    const cols = row.map(col => {
+      const w = Math.max(...col.map(k => zoneShape[k].w));
+      let cy = 0; const items = col.map(k => { const it = { k, x, y: cy }; cy += zoneShape[k].h + GAPY * 0.6; return it; });
+      const c = { items, w, h: cy - GAPY * 0.6 }; x += w + GAPX; rowH = Math.max(rowH, c.h); return c;
+    });
+    const rowW = x - GAPX; maxW = Math.max(maxW, rowW);
+    placed.push({ cols, rowW, y, rowH });
+    y += rowH + GAPY;
+  }
+  const out = {};
+  for (const r of placed) for (const c of r.cols) for (const it of c.items)
+    out[it.k] = { x: it.x + (maxW - r.rowW) / 2, y: r.y + it.y };
+  return { pos: out, w: maxW, h: y - GAPY };
+}
+function applyLayout(name) {
+  const { pos } = packLayout(LAYOUTS[name]);
+  for (const k in pos) { const sh = zoneShape[k]; for (const { n, dx, dy } of sh.rel) { n.x = pos[k].x + sh.ox + dx; n.y = pos[k].y + sh.oy + dy; } }
+  drawZones(); drawEdges(); drawNodes();
+  computeBounds(); ZONES.forEach(z => z.size()); placeLabels();
+  // keep whatever is focused focused
+  if (!drawer.hidden && byId[location.hash.slice(1)]) focusEdges(location.hash.slice(1));
+  if (tourOn() && tour.i >= 0) tourFocus(TOUR[tour.i]);
+}
+function bestLayout() {
+  const target = usableW() / Math.max(1, usableH() - 80);
+  let best = "square", score = Infinity;
+  for (const name in LAYOUTS) { const { w, h } = packLayout(LAYOUTS[name]); const sc = Math.abs(Math.log((w / h) / target)); if (sc < score) { score = sc; best = name; } }
+  return best;
+}
+let layoutMode = "auto";
+try { layoutMode = localStorage.getItem("atlas-layout") || "auto"; } catch (e) {}
+if (layoutMode !== "auto" && !LAYOUTS[layoutMode]) layoutMode = "auto";
+let currentLayout = "";
+const layoutBtn = document.getElementById("layoutBtn");
+function arrange(animated) {
+  const name = layoutMode === "auto" ? bestLayout() : layoutMode;
+  layoutBtn.textContent = "Layout: " + (layoutMode === "auto" ? "Auto (" + name + ")" : name[0].toUpperCase() + name.slice(1));
+  if (name !== currentLayout) { currentLayout = name; applyLayout(name); }
+  if (tourOn() && tour.i >= 0) tourCamera(byId[TOUR[tour.i].id]);
+  else if (!drawer.hidden && byId[location.hash.slice(1)]) centerOn(byId[location.hash.slice(1)]);
+  else fit(animated);
+}
+function onResize() { if (layoutMode === "auto") arrange(false); else if (drawer.hidden && !tourOn()) fit(false); }
+const MODES = ["auto", "wide", "square", "tall"];
+layoutBtn.addEventListener("click", () => {
+  layoutMode = MODES[(MODES.indexOf(layoutMode) + 1) % MODES.length];
+  try { localStorage.setItem("atlas-layout", layoutMode); } catch (e) {}
+  arrange(true);
+});
+
 /* auto tour */
 const tourEl = document.getElementById("tour"), tourBar = document.getElementById("tourBar"), tourPlayBtn = document.getElementById("tourPlay");
 const tour = { i: -1, playing: false, dur: 0, elapsed: 0, last: 0, raf: 0 };
@@ -645,7 +731,8 @@ document.getElementById("tourNext").addEventListener("click", () => goTour(tour.
 document.getElementById("tourClose").addEventListener("click", stopTour);
 document.getElementById("tourDetails").addEventListener("click", () => { const id = TOUR[Math.max(0, tour.i)].id; stopTour(); select(id, false); });
 
-fit(false);
+arrange(false);
+if (document.fonts) document.fonts.ready.then(() => { ZONES.forEach(z => z.size()); placeLabels(); });
 const start = location.hash.slice(1);
 if (byId[start]) select(start, false);
 else if (start === "tour") startTour(0);
