@@ -25,6 +25,7 @@
   --amber-text: #9A6F00;
   --coral: #F26B5E;
   --code-bg: #1A1A18; --code-fg: #F5F4F0; --code-dim: #9C998F;
+  --frame: #EAE7DF;
   --font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mark: var(--font-body);
   --font-label: var(--font-body);
@@ -37,14 +38,14 @@
   :root:not([data-theme="light"]) {
     --paper: #121211; --white: #1C1C1A; --ink: #F5F4F0; --muted: #ADA99C; --line: #77736A; --border: #33322D; --dot: #2A2925;
     --green: #9CF27A; --amber: #FFE27A; --amber-text: #FFE27A; --coral: #FF9E8A;
-    --code-bg: #0B0B0A; --code-fg: #F5F4F0; --code-dim: #8A877C;
+    --code-bg: #0B0B0A; --code-fg: #F5F4F0; --code-dim: #8A877C; --frame: #1B1B19;
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
     --paper: #121211; --white: #1C1C1A; --ink: #F5F4F0; --muted: #ADA99C; --line: #77736A; --border: #33322D; --dot: #2A2925;
     --green: #9CF27A; --amber: #FFE27A; --amber-text: #FFE27A; --coral: #FF9E8A;
-    --code-bg: #0B0B0A; --code-fg: #F5F4F0; --code-dim: #8A877C;
+    --code-bg: #0B0B0A; --code-fg: #F5F4F0; --code-dim: #8A877C; --frame: #1B1B19;
     color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -80,10 +81,11 @@ body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1
 :root[data-theme="dark"] .z-florets  { --zc: #C3AEFF; --zt: #221D33; }
 :root[data-theme="dark"] .z-verdict  { --zc: #8CC4F2; --zt: #16212D; }
 :root[data-theme="dark"] .z-scale    { --zc: #74E0D2; --zt: #132826; }
-.group .s { stroke: var(--ink); fill: none; opacity: .7; }
+.group .s { stroke: var(--ink); fill: none; stroke-width: 2.6px; }
+.group .f { fill: var(--frame); stroke: none; }
 .group .gbg { fill: var(--paper); }
-.group .gt { font-family: var(--font-body); font-weight: 700; font-size: 19px; fill: var(--ink); letter-spacing: -.01em; }
-.group .gn { font-family: var(--font-mono); font-size: 13px; fill: var(--muted); }
+.group .gt { font-family: var(--font-body); font-weight: 700; font-size: 21px; fill: var(--ink); letter-spacing: -.01em; }
+.group .gn { font-family: var(--font-mono); font-size: 14px; fill: var(--muted); }
 .zone .f { fill: var(--zt); stroke: none; }
 .zone .s { stroke: var(--zc); fill: none; opacity: .55; }
 .zone .hdr { fill: var(--zc); }
@@ -318,7 +320,7 @@ function drawGroups() {
     Object.assign(gr, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
     const g = el("g", { class: "group" });
     zl.insertBefore(g, zl.firstChild);
-    g.appendChild(sketchRect(x0, y0, gr.w, gr.h, seedOf(gr.label), false, true));
+    g.appendChild(sketchRect(x0, y0, gr.w, gr.h, seedOf(gr.label), true, false));
     const bg = el("rect", { class: "gbg", x: x0 + 16, y: y0 - 13, width: 10, height: 26 }, g);
     const t = el("text", { class: "gt", x: x0 + 26, y: y0 + 7 }, g); t.textContent = gr.label;
     const nt = el("text", { class: "gn", y: y0 + 6 }, g); nt.textContent = gr.note;
