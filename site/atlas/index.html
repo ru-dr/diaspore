@@ -105,43 +105,43 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(
 
 .ctrl { position: fixed; z-index: 5; display: flex; gap: 4px; align-items: center;
   left: calc(max(16px, env(safe-area-inset-left, 0px))); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 4px; }
-.ctrl button { font: 600 15px var(--font-body); color: var(--ink); background: transparent; border: 0; border-radius: 7px; min-width: 34px; height: 34px; padding: 0 10px; cursor: pointer; }
+  background: var(--white); border: 1px solid var(--border); border-radius: 0; padding: 4px; }
+.ctrl button { font: 600 15px var(--font-body); color: var(--ink); background: transparent; border: 0; border-radius: 0; min-width: 34px; height: 34px; padding: 0 10px; cursor: pointer; }
 .ctrl button:hover { background: var(--paper); }
 .ctrl button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
 .ctrl .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
 .ctrl .zoom { font: 500 12px var(--font-mono); color: var(--muted); min-width: 50px; text-align: center; font-variant-numeric: tabular-nums; }
 .key { position: fixed; z-index: 5; right: calc(max(16px, env(safe-area-inset-right, 0px))); bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  display: flex; gap: 14px; font-size: 12px; color: var(--muted); background: var(--white); border: 1px solid var(--border); border-radius: 10px; padding: 8px 12px; }
-.key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+  display: flex; gap: 14px; font-size: 12px; color: var(--muted); background: var(--white); border: 1px solid var(--border); border-radius: 0; padding: 8px 12px; }
+.key i { display: inline-block; width: 9px; height: 9px; border-radius: 0; margin-right: 6px; vertical-align: 0; }
 button:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
 
 /* tour */
 .ctrl .play { background: var(--ink); color: var(--paper); padding: 0 14px; }
 .ctrl .play:hover { background: var(--ink); opacity: .88; }
 .tour { position: fixed; z-index: 7; left: 50%; transform: translateX(-50%); bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  width: min(620px, calc(100vw - 32px)); background: var(--white); border: 1px solid var(--border); border-top: 6px solid var(--zc, var(--ink));
-  border-radius: 14px; box-shadow: 0 12px 40px rgb(0 0 0 / .16); padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 8px; }
+  width: min(620px, calc(100vw - 32px)); background: var(--white); border: 1px solid var(--border); 
+  border-radius: 0; box-shadow: 0 12px 40px rgb(0 0 0 / .16); padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 8px; }
 .tour[hidden] { display: none; }
 .tour .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
-.tour .eyebrow { font: 12px var(--font-mono); color: var(--zc, var(--muted)); }
+.tour .eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 12px var(--font-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 .tour h2 { margin: 0; font-weight: 700; font-size: 22px; letter-spacing: -.02em; line-height: 1.2; }
 .tour p { margin: 0; font-size: 15px; line-height: 1.55; min-height: 3.1em; }
-.tour .bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.tour .bar { height: 3px; background: var(--border); border-radius: 0; overflow: hidden; margin-top: 2px; }
 .tour .bar div { height: 100%; width: 0; background: var(--zc, var(--ink)); }
 .tour .btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.tour .btns button { font: 600 14px var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--border); border-radius: 8px; height: 34px; min-width: 38px; padding: 0 12px; cursor: pointer; }
+.tour .btns button { font: 600 14px var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--border); border-radius: 0; height: 34px; min-width: 38px; padding: 0 12px; cursor: pointer; }
 .tour .btns button:hover { border-color: var(--line); }
 .tour .btns .main { background: var(--ink); color: var(--paper); border-color: var(--ink); min-width: 92px; }
 .tour .btns .spacer { flex: 1; }
-.tour .x { font: 400 20px var(--font-body); line-height: 1; color: var(--muted); background: transparent; border: 0; width: 30px; height: 30px; cursor: pointer; border-radius: 6px; }
+.tour .x { font: 400 20px var(--font-body); line-height: 1; color: var(--muted); background: transparent; border: 0; width: 30px; height: 30px; cursor: pointer; border-radius: 0; }
 .tour .x:hover { background: var(--paper); }
 .touring .key { display: none; }
 
 /* drawer */
 .drawer { position: fixed; z-index: 6; top: calc(12px + env(safe-area-inset-top, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   right: calc(max(12px, env(safe-area-inset-right, 0px))); width: min(560px, calc(100vw - 24px));
-  background: var(--white); border: 1px solid var(--border); border-radius: 14px; box-shadow: 0 10px 40px rgb(0 0 0 / .12);
+  background: var(--white); border: 1px solid var(--border); border-radius: 0; box-shadow: 0 10px 40px rgb(0 0 0 / .12);
   overflow-y: auto; padding: 22px 24px 28px; display: flex; flex-direction: column; gap: 14px; font-size: 14.5px; line-height: 1.6; }
 .drawer > * { flex-shrink: 0; }
 .drawer[hidden] { display: none; }
@@ -150,31 +150,31 @@ button:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
   .key { display: none; }
 }
 .drawer .top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
-.drawer { border-top: 6px solid var(--zc, var(--border)); }
-.drawer .eyebrow { font: 12px var(--font-mono); color: var(--zc, var(--muted)); }
-.drawer h2 { font-family: var(--font-mark); font-weight: 700; font-size: 30px; letter-spacing: -.025em; line-height: 1.1; margin: 4px 0 0; }
+.drawer .eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 12px var(--font-mono); color: var(--muted); }
+.ztag { display: inline-block; font: 600 12px var(--font-body); letter-spacing: .01em; background: var(--zc, var(--ink)); color: var(--white); padding: 3px 8px; }
+.drawer h2 { font-family: var(--font-mark); font-weight: 700; font-size: 30px; letter-spacing: -.025em; line-height: 1.1; margin: 10px 0 0; }
 .drawer h3 { font-family: var(--font-label); font-weight: 600; font-size: 16px; letter-spacing: -.01em; margin: 10px 0 -4px; }
 .drawer p { margin: 0; }
 .drawer .lede { font-size: 15.5px; }
 .drawer ol { margin: 0; padding-left: 20px; display: grid; gap: 5px; }
-.close { font: 400 22px var(--font-body); line-height: 1; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 8px; width: 36px; height: 36px; cursor: pointer; flex: none; }
+.close { font: 400 22px var(--font-body); line-height: 1; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 0; width: 36px; height: 36px; cursor: pointer; flex: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-.chip { font: 11.5px var(--font-mono); border: 1px solid var(--border); border-radius: 999px; padding: 2px 9px; color: var(--muted); white-space: nowrap; }
+.chip { font: 11.5px var(--font-mono); border: 1px solid var(--border); border-radius: 0; padding: 2px 9px; color: var(--muted); white-space: nowrap; }
 .chip.built { color: var(--green); border-color: currentColor; }
 .chip.designing { color: var(--amber-text); border-color: currentColor; }
 .io { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 520px) { .io { grid-template-columns: 1fr; } }
-.io > div { border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 0; display: grid; gap: 8px; align-content: start; }
+.io > div { border: 1px solid var(--border); border-radius: 0; padding: 10px 12px; min-width: 0; display: grid; gap: 8px; align-content: start; }
 .io .lbl { font-family: var(--font-label); font-weight: 600; font-size: 15px; }
 .io dl { margin: 0; display: grid; gap: 7px; }
 .io dt { font: 12.5px var(--font-mono); color: var(--ink); overflow-wrap: anywhere; }
 .io dd { margin: 0; font-size: 13.5px; color: var(--muted); }
 .uses { display: flex; flex-wrap: wrap; gap: 6px; }
-.uses span { font-size: 13px; background: var(--paper); border: 1px solid var(--border); border-radius: 6px; padding: 2px 8px; }
+.uses span { font-size: 13px; background: var(--paper); border: 1px solid var(--border); border-radius: 0; padding: 2px 8px; }
 .codehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; font: 12px var(--font-mono); color: var(--muted); margin-bottom: -6px; }
-.badge { font: 11px var(--font-mono); border-radius: 4px; padding: 1px 6px; border: 1px solid currentColor; }
+.badge { font: 11px var(--font-mono); border-radius: 0; padding: 1px 6px; border: 1px solid currentColor; }
 .badge.real { color: var(--green); } .badge.sketch { color: var(--amber-text); }
-pre { margin: 0; font: 12.5px/1.6 var(--font-mono); background: var(--code-bg); color: var(--code-fg); border-radius: 10px; padding: 12px 14px; overflow-x: auto; white-space: pre; tab-size: 4; }
+pre { margin: 0; font: 12.5px/1.6 var(--font-mono); background: var(--code-bg); color: var(--code-fg); border-radius: 0; padding: 12px 14px; overflow-x: auto; white-space: pre; tab-size: 4; }
 pre .cm { color: var(--code-dim); }
 pre .kw { color: #FFE27A; }
 pre .st { color: #9CF27A; }
@@ -182,7 +182,7 @@ pre .st { color: #9CF27A; }
 .example .arrow { font: 12px var(--font-mono); color: var(--muted); }
 .conns { display: grid; gap: 6px; }
 .conn { display: grid; grid-template-columns: 22px minmax(0, 1fr); gap: 8px; align-items: baseline; text-align: left; font: 14px var(--font-body); color: var(--ink);
-  background: var(--paper); border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; cursor: pointer; }
+  background: var(--paper); border: 1px solid var(--border); border-radius: 0; padding: 7px 10px; cursor: pointer; }
 .conn:hover { border-color: var(--line); }
 .conn .dir { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
 .conn em { font-style: normal; color: var(--muted); }
@@ -295,7 +295,7 @@ for (const z of ZONES) {
   Object.assign(z, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
   const g = el("g", { class: "zone z-" + z.key }, zl);
   g.appendChild(sketchRect(x0, y0, z.w, z.h, seedOf(z.label), true, false));
-  const pill = el("rect", { class: "hdr", x: x0 + 18, y: y0 + 14, width: 100, height: 32, rx: 16 }, g);
+  const pill = el("rect", { class: "hdr", x: x0 + 18, y: y0 + 14, width: 100, height: 32 }, g);
   const txt = el("text", { x: x0 + 34, y: y0 + 37 }, g);
   txt.textContent = z.label;
   z.size = () => pill.setAttribute("width", txt.getComputedTextLength() + 32);
@@ -415,7 +415,7 @@ for (const n of NODES) {
     shape.appendChild(sketchRect(n.x - W / 2 + 6, n.y - H / 2 - 6, W, H, seedOf(n.id) + 7, true));
   }
   shape.appendChild(sketchRect(n.x - W / 2, n.y - H / 2, W, H, seedOf(n.id), true));
-  el("rect", { class: "bar", x: n.x - W / 2 + 10, y: n.y - H / 2 + 12, width: 5, height: H - 24, rx: 2.5 }, g);
+  el("rect", { class: "bar", x: n.x - W / 2 + 10, y: n.y - H / 2 + 12, width: 5, height: H - 24 }, g);
   el("text", { class: "t", x: n.x - W / 2 + 26, y: n.y - 3 }, g).textContent = n.label;
   el("text", { class: "s", x: n.x - W / 2 + 26, y: n.y + 21 }, g).textContent = n.sub;
   el("circle", { class: "status-" + n.status, cx: n.x + W / 2 - 16, cy: n.y - H / 2 + 16, r: 5.5 }, g);
@@ -542,7 +542,7 @@ function select(id, fromTap) {
   const n = byId[id]; if (!n) return;
   const conns = focusEdges(id);
   drawer.innerHTML = `
-    <div class="top"><div><div class="eyebrow">${esc(zoneOf(n))} · ${esc(n.file)}</div><h2>${esc(n.label)}</h2></div>
+    <div class="top"><div><div class="eyebrow"><span class="ztag">${esc(zoneOf(n))}</span><span>${esc(n.file)}</span></div><h2>${esc(n.label)}</h2></div>
       <button class="close" type="button" aria-label="Close">×</button></div>
     <div class="chips"><span class="chip ${n.status}">● ${statusText[n.status]}</span><span class="chip">${n.cp === "—" ? "cross-cutting" : esc(n.cp)}</span><span class="chip">owner: ${esc(n.owner)}</span><span class="chip">${esc(n.adr)}</span></div>
     <p class="lede">${esc(n.what)}</p>
@@ -682,7 +682,7 @@ function goTour(i) {
   tour.i = i; tour.elapsed = 0;
   const s = TOUR[i], n = byId[s.id];
   tourEl.className = "tour z-" + n.g;
-  document.getElementById("tourStep").textContent = `Step ${i + 1} of ${TOUR.length} · ${zoneOf(n)}`;
+  document.getElementById("tourStep").innerHTML = `<span class="ztag">${esc(zoneOf(n))}</span><span>Step ${i + 1} of ${TOUR.length}</span>`;
   document.getElementById("tourTitle").textContent = n.label;
   document.getElementById("tourText").textContent = s.text;
   tour.dur = stepDur(s);
@@ -714,7 +714,7 @@ function endTour() {
   pauseTour(); tour.elapsed = tour.dur; tourBar.style.width = "100%";
   tourPlayBtn.textContent = "Replay";
   document.getElementById("tourText").textContent = "That's one run, start to finish: one seed in, one exact failure out, replayable anywhere. Click any box to dig into its code, inputs and outputs.";
-  document.getElementById("tourStep").textContent = `Done · ${TOUR.length} features`;
+  document.getElementById("tourStep").innerHTML = `<span class="ztag">Done</span><span>${TOUR.length} features</span>`;
   document.getElementById("tourTitle").textContent = "Same seed, same run";
   focusEdges(null); fit(true);
 }
