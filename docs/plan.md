@@ -49,6 +49,8 @@ which has a smaller fallback at Gate 2.
 
 ## Checkpoints
 
+Who owns each checkpoint and what it waits on: [`checkpoint-order.md`](checkpoint-order.md).
+
 ### Phase 0: Ground
 
 - [x] **CP0** A repo that tests itself: CI runs the tests on Linux, macOS, and Windows
