@@ -234,6 +234,7 @@ diaspore/
 │   │   ├── clock.go                 CP1
 │   │   ├── queue.go                 CP2
 │   │   └── loop.go                  CP4
+│   ├── vtime/vtime.go               CP1
 │   ├── seed/seed.go                 CP3
 │   ├── trace/trace.go               CP5
 │   ├── network/network.go           CP6

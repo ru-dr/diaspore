@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ru-dr/diaspore/internal/sim"
+	"github.com/ru-dr/diaspore/internal/vtime"
 )
 
 // Version is the protocol version this Diaspore speaks.
@@ -32,23 +32,23 @@ type Init struct {
 	Node     string            `json:"node"`
 	Peers    []string          `json:"peers"`
 	RandSeed int64             `json:"rand_seed"`
-	Time     sim.Time          `json:"time"`
+	Time     vtime.Time        `json:"time"`
 	Stored   map[string]string `json:"stored"`
 }
 
 // Message delivers a message from another node or a client.
 type Message struct {
 	Type string          `json:"type"`
-	Time sim.Time        `json:"time"`
+	Time vtime.Time      `json:"time"`
 	From string          `json:"from"`
 	Body json.RawMessage `json:"body"`
 }
 
 // Timer tells a floret that one of its timers fired.
 type Timer struct {
-	Type string   `json:"type"`
-	Time sim.Time `json:"time"`
-	ID   string   `json:"id"`
+	Type string     `json:"type"`
+	Time vtime.Time `json:"time"`
+	ID   string     `json:"id"`
 }
 
 // Done is the only reply a floret sends.
@@ -70,12 +70,12 @@ type Send struct {
 
 // SetTimer asks Diaspore to fire a timer after a delay in microseconds.
 type SetTimer struct {
-	ID    string   `json:"id"`
-	After sim.Time `json:"after"`
+	ID    string     `json:"id"`
+	After vtime.Time `json:"after"`
 }
 
 // NewInit builds an init event, turning nil peers and stored into [] and {} so it encodes validly.
-func NewInit(node string, peers []string, randSeed int64, t sim.Time, stored map[string]string) Init {
+func NewInit(node string, peers []string, randSeed int64, t vtime.Time, stored map[string]string) Init {
 	if peers == nil {
 		peers = []string{}
 	}
@@ -86,12 +86,12 @@ func NewInit(node string, peers []string, randSeed int64, t sim.Time, stored map
 }
 
 // NewMessage builds a message event.
-func NewMessage(t sim.Time, from string, body json.RawMessage) Message {
+func NewMessage(t vtime.Time, from string, body json.RawMessage) Message {
 	return Message{Type: TypeMessage, Time: t, From: from, Body: body}
 }
 
 // NewTimer builds a timer event.
-func NewTimer(t sim.Time, id string) Timer {
+func NewTimer(t vtime.Time, id string) Timer {
 	return Timer{Type: TypeTimer, Time: t, ID: id}
 }
 
@@ -247,7 +247,7 @@ func (d *Done) validate() error {
 }
 
 // checkTime keeps virtual time in the range every language reads exactly.
-func checkTime(t sim.Time) error {
+func checkTime(t vtime.Time) error {
 	if t < 0 || t > MaxInt {
 		return fmt.Errorf("time %d is outside 0 to 2^53 - 1", t)
 	}

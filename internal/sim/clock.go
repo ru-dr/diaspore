@@ -1,9 +1,13 @@
 package sim
 
-import "errors"
+import (
+	"errors"
 
-// Time is virtual time in microseconds.
-type Time int64
+	"github.com/ru-dr/diaspore/internal/vtime"
+)
+
+// Time is virtual time in microseconds. Alias of vtime.Time so protocol can use it without importing sim.
+type Time = vtime.Time
 
 // ErrBackward is returned when asked to move the clock to an earlier time.
 var ErrBackward = errors.New("clock cannot move backward")
