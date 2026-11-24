@@ -36,9 +36,9 @@ jobs:
           mkdir -p _site/atlas/assets
           cp docs/assets/favicon.svg docs/assets/logo-lockup-color.svg docs/assets/logo-lockup-color-dark.svg _site/atlas/assets/
 
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v4
+      - uses: actions/configure-pages@v6
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: _site
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
