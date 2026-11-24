@@ -144,15 +144,17 @@ button:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
   .drawer { top: auto; left: calc(max(8px, env(safe-area-inset-left, 0px))); right: calc(max(8px, env(safe-area-inset-right, 0px))); width: auto; height: 70vh; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
   .key { display: none; }
 }
-.drawer .top { display: flex; justify-content: space-between; gap: 12px; align-items: start; }
 .drawer .eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 12px var(--font-mono); color: var(--muted); }
 .ztag { display: inline-block; font: 600 12px var(--font-body); letter-spacing: .01em; background: var(--zc, var(--ink)); color: var(--white); padding: 3px 8px; }
-.drawer h2 { font-family: var(--font-mark); font-weight: 700; font-size: 30px; letter-spacing: -.025em; line-height: 1.1; margin: 10px 0 0; }
+.drawer h2 { font-family: var(--font-mark); font-weight: 700; font-size: 30px; letter-spacing: -.025em; line-height: 1.1; margin: 2px 0 0; }
 .drawer h3 { font-family: var(--font-label); font-weight: 600; font-size: 16px; letter-spacing: -.01em; margin: 10px 0 -4px; }
 .drawer p { margin: 0; }
 .drawer .lede { font-size: 15.5px; }
 .drawer ol { margin: 0; padding-left: 20px; display: grid; gap: 5px; }
-.close { font: 400 22px var(--font-body); line-height: 1; color: var(--muted); background: transparent; border: 1px solid var(--border); border-radius: 0; width: 36px; height: 36px; cursor: pointer; flex: none; }
+.headbar { display: flex; align-items: center; gap: 10px; min-height: 26px; }
+.headbar .path { margin-left: auto; font: 12px var(--font-mono); color: var(--muted); text-align: right; overflow-wrap: anywhere; }
+.close { flex: none; display: grid; place-items: center; width: 26px; height: 26px; padding: 0; color: var(--muted); background: transparent; border: 0; border-radius: 0; cursor: pointer; }
+.close:hover { color: var(--ink); background: var(--paper); }
 .chips { display: flex; flex-wrap: wrap; gap: 6px; }
 .chip { font: 11.5px var(--font-mono); border: 1px solid var(--border); border-radius: 0; padding: 2px 9px; color: var(--muted); white-space: nowrap; }
 .chip.built { color: var(--green); border-color: currentColor; }
@@ -523,8 +525,9 @@ const dl = rows => `<dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}<
 function detailHTML(n, conns) {
   const id = n.id;
   return `
-    <div class="top"><div><div class="eyebrow"><span class="ztag">${esc(zoneOf(n))}</span><span>${esc(n.file)}</span></div><h2>${esc(n.label)}</h2></div>
-      <button class="close" type="button" aria-label="Close">×</button></div>
+    <div class="headbar"><span class="ztag">${esc(zoneOf(n))}</span><span class="path">${esc(n.file)}</span>
+      <button class="close" type="button" aria-label="Close details"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button></div>
+    <h2>${esc(n.label)}</h2>
     <div class="chips"><span class="chip ${n.status}">● ${statusText[n.status]}</span><span class="chip">${n.cp === "—" ? "cross-cutting" : esc(n.cp)}</span><span class="chip">owner: ${esc(n.owner)}</span><span class="chip">${esc(n.adr)}</span></div>
     <p class="lede">${esc(n.what)}</p>
     <div class="io">
