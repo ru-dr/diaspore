@@ -238,6 +238,7 @@ The full reference, including terms deliberately rejected, is in
 | [`docs/build-guide.pdf`](docs/build-guide.pdf) | Every checkpoint, with its goal, tests, and done-when list |
 | [`docs/naming.md`](docs/naming.md) | Naming reference, including terms deliberately rejected |
 | [`docs/brand-guide.md`](docs/brand-guide.md) | Logo, color, gradient, and usage rules, with all brand assets |
+| [Atlas](https://ru-dr.github.io/diaspore/atlas/) ([`site/atlas`](site/atlas)) | Interactive map of every component: inputs, outputs, code, and examples |
 
 Coming during the build: `PROTOCOL.md`, the full floret protocol, and `docs/findings.md`, the
 seeds that broke checkers and why.

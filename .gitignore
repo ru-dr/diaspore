@@ -16,3 +16,6 @@ loadgen
 .env
 .DS_Store
 __pycache__/
+
+# Atlas preview (copied from docs/assets at deploy time)
+site/atlas/assets/
