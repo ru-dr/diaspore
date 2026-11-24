@@ -12,7 +12,7 @@ Deterministic simulation and failure search for distributed systems.
 
 [![Go](https://shieldcn.dev/badge/Go-1.27.1-00ADD8.svg?logo=go&logoColor=white)](https://go.dev)
 [![License](https://shieldcn.dev/badge/license-MIT-black.svg)](LICENSE)
-[![Status](https://shieldcn.dev/badge/status-in_development-orange.svg)](docs/build/plan.md)
+[![Status](https://shieldcn.dev/badge/status-in_development-orange.svg)](docs/plan.md)
 
 [How it works](#how-it-works) · [CLI](#cli) · [Protocol](#the-protocol) · [Roadmap](#roadmap) · [Docs](#documentation)
 
@@ -28,7 +28,7 @@ Diaspore pulls every source of that randomness into one place and drives it from
 Same seed, same execution, as long as the florets follow the rules below. A bug stops being an anecdote and becomes an address.
 
 > **Status:** in development. The virtual clock, event queue, seed streams, and floret protocol v1
-> are built and tested; the rest of this README describes the v0.1 target, and the [plan](docs/build/plan.md) tracks progress.
+> are built and tested; the rest of this README describes the v0.1 target, and the [plan](docs/plan.md) tracks progress.
 
 ---
 
@@ -234,8 +234,8 @@ The full reference, including terms deliberately rejected, is in
 | Document | What is in it |
 |---|---|
 | [`docs/design.md`](docs/design.md) | The pieces, the event model, the decisions, and why |
-| [`docs/build/plan.md`](docs/build/plan.md) | Schedule, checkpoint tracker, milestones, and gates |
-| [`docs/build-guide.pdf`](docs/build-guide.pdf) | Every checkpoint, with its goal, tests, and done-when list |
+| [`docs/plan.md`](docs/plan.md) | Schedule, checkpoint tracker, milestones, and gates |
+| [`docs/build/build-guide.pdf`](docs/build/build-guide.pdf) | Every checkpoint, with its goal, tests, and done-when list |
 | [`docs/naming.md`](docs/naming.md) | Naming reference, including terms deliberately rejected |
 | [`docs/brand-guide.md`](docs/brand-guide.md) | Logo, color, gradient, and usage rules, with all brand assets |
 

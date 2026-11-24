@@ -3,7 +3,7 @@
 October 29 to December 14, 2026. A team of three.
 
 This file tracks progress. The full checkpoint details, with "Decide first" questions and
-"Tests first" lists, are in the build guide: [`build-guide.pdf`](build-guide.pdf). If the two ever
+"Tests first" lists, are in the build guide: [`build-guide.pdf`](build/build-guide.pdf). If the two ever
 disagree, the build guide wins.
 
 Every must-have ships. The gates below only ever drop bonus items. The one exception is CP24,
