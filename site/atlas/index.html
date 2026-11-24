@@ -81,7 +81,7 @@ body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1
 :root[data-theme="dark"] .z-florets  { --zc: #C3AEFF; --zt: #221D33; }
 :root[data-theme="dark"] .z-verdict  { --zc: #8CC4F2; --zt: #16212D; }
 :root[data-theme="dark"] .z-scale    { --zc: #74E0D2; --zt: #132826; }
-.group .s { stroke: var(--ink); fill: none; stroke-width: 2.6px; }
+.group .s { display: none; }
 .group .f { fill: var(--frame); stroke: none; }
 .group .gbg { fill: var(--paper); }
 .group .gt { font-family: var(--font-body); font-weight: 700; font-size: 21px; fill: var(--ink); letter-spacing: -.01em; }
@@ -109,7 +109,8 @@ body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1
 .edge.on .s { stroke: var(--ink); stroke-width: 2.6px; opacity: 1; }
 .edge.dim .s { opacity: .12; }
 .elabel { display: none; pointer-events: none; }
-.elabel text { font-family: var(--font-mono); font-size: 13.5px; fill: var(--muted); }
+.elabel text { font-family: var(--font-mono); font-size: 14px; font-weight: 500; fill: var(--muted); }
+.elabel.tight text { stroke: var(--paper); stroke-width: 3px; paint-order: stroke; stroke-linejoin: round; }
 .elabel.main { display: inline; }
 .elabel.on { display: inline; }
 .elabel.on text { fill: var(--ink); font-weight: 600; }
@@ -311,7 +312,7 @@ for (const z of ZONES) {
 drawGroups();
 }
 /* outer frames (e.g. Diaspore core) around neighbouring zones; the label sits on the top edge like a legend */
-const GM = 24, GTOP = 34;
+const GM = 22, GTOP = 50;
 function drawGroups() {
   for (const gr of (typeof GROUPS === "undefined" ? [] : GROUPS)) {
     const zs = ZONES.filter(z => gr.members.includes(z.key));
@@ -321,10 +322,9 @@ function drawGroups() {
     const g = el("g", { class: "group" });
     zl.insertBefore(g, zl.firstChild);
     g.appendChild(sketchRect(x0, y0, gr.w, gr.h, seedOf(gr.label), true, false));
-    const bg = el("rect", { class: "gbg", x: x0 + 16, y: y0 - 13, width: 10, height: 26 }, g);
-    const t = el("text", { class: "gt", x: x0 + 26, y: y0 + 7 }, g); t.textContent = gr.label;
-    const nt = el("text", { class: "gn", y: y0 + 6 }, g); nt.textContent = gr.note;
-    gr.size = () => { const tw = t.getComputedTextLength(); nt.setAttribute("x", x0 + 26 + tw + 12); bg.setAttribute("width", tw + nt.getComputedTextLength() + 32); };
+    const t = el("text", { class: "gt", x: x0 + 20, y: y0 + 32 }, g); t.textContent = gr.label;
+    const nt = el("text", { class: "gn", y: y0 + 31 }, g); nt.textContent = gr.note;
+    gr.size = () => { nt.setAttribute("x", x0 + 20 + t.getComputedTextLength() + 12); };
   }
 }
 
@@ -388,6 +388,12 @@ function placeLabels() {
   // sample every main arrow so a label can avoid sitting on someone else's line
   const samples = [];
   edgeEls.forEach((e, i) => { if (e.main) for (let k = 0; k <= 40; k++) { const [x, y] = pointAt(e.pts, k / 40); samples.push({ x, y, i }); } });
+  // zone and frame borders count as lines too, so a label never sits across an outline
+  for (const r of ZONES) {
+    if (r.w == null) continue;
+    for (let x = r.x; x <= r.x + r.w; x += 8) samples.push({ x, y: r.y, i: -1 }, { x, y: r.y + r.h, i: -1 });
+    for (let y = r.y; y <= r.y + r.h; y += 8) samples.push({ x: r.x, y, i: -1 }, { x: r.x + r.w, y, i: -1 });
+  }
   const hitsLine = (r, self) => samples.some(p => p.i !== self && p.x > r.x - 3 && p.x < r.x + r.w + 3 && p.y > r.y - 3 && p.y < r.y + r.h + 3);
   for (const e of order) {
     probe.textContent = e.t.txt.textContent;
@@ -415,13 +421,15 @@ function placeLabels() {
     let best = null;
     const self = edgeEls.indexOf(e);
     for (const strict of [true, false]) {
-      outer: for (const f of [0.5, 0.4, 0.6, 0.3, 0.7, 0.22, 0.78]) for (const side of [1, -1]) {
+      outer: for (const f of [0.5, 0.4, 0.6, 0.3, 0.7, 0.22, 0.78, 0.15, 0.85]) for (const side of [1, -1]) {
         const c = spot(f, side);
         if (!taken.some(o => overlaps(o, c.r)) && (!strict || !hitsLine(c.r, self))) { best = c; break outer; }
       }
       if (best) break;
     }
+    const clear = !!best;
     best = best || spot(0.5, 1);
+    e.t.classList.toggle("tight", !clear);
     if (e.main) taken.push(best.r); // hidden links only show when focused, so they don't reserve space
     e.t.txt.setAttribute("x", best.tx); e.t.txt.setAttribute("y", best.ty); e.t.txt.setAttribute("text-anchor", best.anchor);
   }
@@ -639,7 +647,7 @@ const LAYOUTS = {
   square: [[["input"], ["world"], ["engine"]], [["verdict", "scale"], ["boundary", "florets"]]],
   tall:   [[["input"]], [["world"], ["engine"]], [["boundary", "florets"]], [["verdict", "scale"]]]
 };
-const GAPX = 96, GAPY = 104;
+const GAPX = 110, GAPY = 110;
 // each zone's boxes, relative to the zone's top-left corner (taken from data.js)
 const zoneShape = {};
 for (const z of ZONES) {
