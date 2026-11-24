@@ -116,6 +116,28 @@ body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(
 .key i { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
 button:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
 
+/* tour */
+.ctrl .play { background: var(--ink); color: var(--paper); padding: 0 14px; }
+.ctrl .play:hover { background: var(--ink); opacity: .88; }
+.tour { position: fixed; z-index: 7; left: 50%; transform: translateX(-50%); bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  width: min(620px, calc(100vw - 32px)); background: var(--white); border: 1px solid var(--border); border-top: 6px solid var(--zc, var(--ink));
+  border-radius: 14px; box-shadow: 0 12px 40px rgb(0 0 0 / .16); padding: 16px 20px 14px; display: flex; flex-direction: column; gap: 8px; }
+.tour[hidden] { display: none; }
+.tour .row { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.tour .eyebrow { font: 12px var(--font-mono); color: var(--zc, var(--muted)); }
+.tour h2 { margin: 0; font-weight: 700; font-size: 22px; letter-spacing: -.02em; line-height: 1.2; }
+.tour p { margin: 0; font-size: 15px; line-height: 1.55; min-height: 3.1em; }
+.tour .bar { height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; margin-top: 2px; }
+.tour .bar div { height: 100%; width: 0; background: var(--zc, var(--ink)); }
+.tour .btns { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.tour .btns button { font: 600 14px var(--font-body); color: var(--ink); background: var(--paper); border: 1px solid var(--border); border-radius: 8px; height: 34px; min-width: 38px; padding: 0 12px; cursor: pointer; }
+.tour .btns button:hover { border-color: var(--line); }
+.tour .btns .main { background: var(--ink); color: var(--paper); border-color: var(--ink); min-width: 92px; }
+.tour .btns .spacer { flex: 1; }
+.tour .x { font: 400 20px var(--font-body); line-height: 1; color: var(--muted); background: transparent; border: 0; width: 30px; height: 30px; cursor: pointer; border-radius: 6px; }
+.tour .x:hover { background: var(--paper); }
+.touring .key { display: none; }
+
 /* drawer */
 .drawer { position: fixed; z-index: 6; top: calc(12px + env(safe-area-inset-top, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   right: calc(max(12px, env(safe-area-inset-right, 0px))); width: min(560px, calc(100vw - 24px));
@@ -184,6 +206,8 @@ pre .st { color: #9CF27A; }
 </div>
 
 <div class="ctrl" role="toolbar" aria-label="Zoom">
+  <button type="button" id="playTour" class="play">▶ Play tour</button>
+  <span class="sep"></span>
   <button type="button" id="zoomOut" aria-label="Zoom out">−</button>
   <span class="zoom" id="zoomLabel">100%</span>
   <button type="button" id="zoomIn" aria-label="Zoom in">+</button>
@@ -199,6 +223,20 @@ pre .st { color: #9CF27A; }
 </div>
 
 <aside class="drawer" id="drawer" hidden aria-live="polite"></aside>
+
+<section class="tour" id="tour" hidden aria-live="polite" aria-label="Tour of one run">
+  <div class="row"><span class="eyebrow" id="tourStep"></span><button class="x" type="button" id="tourClose" aria-label="Stop tour">×</button></div>
+  <h2 id="tourTitle"></h2>
+  <p id="tourText"></p>
+  <div class="bar"><div id="tourBar"></div></div>
+  <div class="btns">
+    <button type="button" id="tourPrev" aria-label="Previous step">←</button>
+    <button type="button" id="tourPlay" class="main">Pause</button>
+    <button type="button" id="tourNext" aria-label="Next step">→</button>
+    <span class="spacer"></span>
+    <button type="button" id="tourDetails">Open details</button>
+  </div>
+</section>
 
 <script src="https://cdn.jsdelivr.net/npm/roughjs@4.6.6/bundled/rough.js"></script>
 <script src="data.js"></script>
@@ -431,19 +469,26 @@ function endPointer(e) {
   if (pointers.size < 2) pinch = null;
   if (pointers.size === 0) {
     board.classList.remove("panning");
-    if (!moved) downNode ? select(downNode, true) : closeDrawer();
+    if (!moved) { if (tourOn()) { if (downNode) { stopTour(); select(downNode, true); } else pauseTour(); } else downNode ? select(downNode, true) : closeDrawer(); }
+    else if (tourOn()) pauseTour();
     dragStart = null; downNode = null;
   } else { const p = [...pointers.values()][0]; dragStart = { x: p.x, y: p.y, cx: cam.x, cy: cam.y }; }
 }
 board.addEventListener("pointerup", endPointer);
 board.addEventListener("pointercancel", e => { moved = true; endPointer(e); });
-board.addEventListener("wheel", e => { e.preventDefault(); cancelAnimationFrame(anim); zoomAt(e.clientX, e.clientY, cam.k * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
+board.addEventListener("wheel", e => { e.preventDefault(); cancelAnimationFrame(anim); if (tourOn()) pauseTour(); zoomAt(e.clientX, e.clientY, cam.k * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
 document.getElementById("zoomIn").addEventListener("click", () => zoomAt(innerWidth / 2, innerHeight / 2, cam.k * 1.25));
 document.getElementById("zoomOut").addEventListener("click", () => zoomAt(innerWidth / 2, innerHeight / 2, cam.k / 1.25));
 document.getElementById("fit").addEventListener("click", () => fit(true));
 const allBtn = document.getElementById("allLinks");
 allBtn.addEventListener("click", () => { const on = board.classList.toggle("showall"); allBtn.setAttribute("aria-pressed", on); });
 document.addEventListener("keydown", e => {
+  if (tourOn()) {
+    if (e.key === " ") { e.preventDefault(); tour.playing ? pauseTour() : playTour(); return; }
+    if (e.key === "ArrowRight") { goTour(tour.i + 1); return; }
+    if (e.key === "ArrowLeft") { goTour(tour.i - 1); return; }
+    if (e.key === "Escape") { stopTour(); return; }
+  }
   if (e.key === "+" || e.key === "=") zoomAt(innerWidth / 2, innerHeight / 2, cam.k * 1.25);
   else if (e.key === "-") zoomAt(innerWidth / 2, innerHeight / 2, cam.k / 1.25);
   else if (e.key === "0") fit(true);
@@ -505,6 +550,7 @@ function select(id, fromTap) {
       const other = a === id ? b : a, dir = both ? "⇄" : (a === id ? "→" : "←");
       return `<button class="conn" type="button" data-go="${other}"><span class="dir">${dir}</span><span><b>${esc(byId[other].label)}</b> <em>· ${esc(label)}</em></span></button>`;
     }).join("")}</div>`;
+  if (tourOn()) stopTour();
   drawer.className = "drawer z-" + n.g;
   drawer.hidden = false;
   drawer.scrollTop = 0;
@@ -522,9 +568,87 @@ function closeDrawer() {
 
 ZONES.forEach(z => z.size()); placeLabels();
 if (document.fonts) document.fonts.ready.then(() => { ZONES.forEach(z => z.size()); placeLabels(); });
+/* auto tour */
+const tourEl = document.getElementById("tour"), tourBar = document.getElementById("tourBar"), tourPlayBtn = document.getElementById("tourPlay");
+const tour = { i: -1, playing: false, dur: 0, elapsed: 0, last: 0, raf: 0 };
+const ctrlPlay = document.getElementById("playTour");
+const tourOn = () => !tourEl.hidden;
+const stepDur = s => Math.min(14000, Math.max(6500, s.text.length * 52));
+
+function tourFocus(step) {
+  const keep = new Set([step.id, ...step.via.flat()]);
+  const isVia = e => step.via.some(([a, b]) => (a === e.from && b === e.to) || (a === e.to && b === e.from));
+  for (const k in nodeEls) { nodeEls[k].classList.toggle("dim", !keep.has(k)); nodeEls[k].classList.toggle("sel", k === step.id); }
+  for (const e of edgeEls) {
+    const on = isVia(e);
+    e.g.classList.toggle("on", on); e.g.classList.toggle("dim", !on); e.t.classList.toggle("on", on); e.t.classList.toggle("dim", !on);
+    if (on) edgeLayer.appendChild(e.g);
+  }
+}
+function tourCamera(n) {
+  const k = clampK(Math.max(0.85, Math.min(1.1, cam.k)));
+  const free = innerHeight - tourEl.offsetHeight - 90;
+  animateTo({ k, x: innerWidth / 2 - n.x * k, y: Math.max(120, free / 2 + 40) - n.y * k });
+}
+function goTour(i) {
+  if (i < 0) i = 0;
+  if (i >= TOUR.length) { endTour(); return; }
+  tour.i = i; tour.elapsed = 0;
+  const s = TOUR[i], n = byId[s.id];
+  tourEl.className = "tour z-" + n.g;
+  document.getElementById("tourStep").textContent = `Step ${i + 1} of ${TOUR.length} · ${zoneOf(n)}`;
+  document.getElementById("tourTitle").textContent = n.label;
+  document.getElementById("tourText").textContent = s.text;
+  tour.dur = stepDur(s);
+  tourBar.style.width = "0%";
+  tourFocus(s);
+  tourCamera(n);
+  if (location.hash !== "#tour") history.replaceState(null, "", "#tour");
+}
+function tick(now) {
+  if (!tour.playing) return;
+  tour.elapsed += now - tour.last; tour.last = now;
+  tourBar.style.width = Math.min(100, tour.elapsed / tour.dur * 100) + "%";
+  if (tour.elapsed >= tour.dur) goTour(tour.i + 1);
+  if (tour.playing) tour.raf = requestAnimationFrame(tick);
+}
+function playTour() {
+  if (tour.i >= TOUR.length - 1 && tour.elapsed >= tour.dur) goTour(0);
+  tour.playing = true; tourPlayBtn.textContent = "Pause"; ctrlPlay.textContent = "❚❚ Pause tour";
+  tour.last = performance.now(); cancelAnimationFrame(tour.raf); tour.raf = requestAnimationFrame(tick);
+}
+function pauseTour() { tour.playing = false; tourPlayBtn.textContent = "Play"; ctrlPlay.textContent = "▶ Play tour"; cancelAnimationFrame(tour.raf); }
+function startTour(i = 0) {
+  if (!drawer.hidden) { drawer.hidden = true; }
+  board.classList.add("touring"); document.body.classList.add("touring");
+  tourEl.hidden = false;
+  goTour(i); playTour();
+}
+function endTour() {
+  pauseTour(); tour.elapsed = tour.dur; tourBar.style.width = "100%";
+  tourPlayBtn.textContent = "Replay";
+  document.getElementById("tourText").textContent = "That's one run, start to finish: one seed in, one exact failure out, replayable anywhere. Click any box to dig into its code, inputs and outputs.";
+  document.getElementById("tourStep").textContent = `Done · ${TOUR.length} features`;
+  document.getElementById("tourTitle").textContent = "Same seed, same run";
+  focusEdges(null); fit(true);
+}
+function stopTour() {
+  pauseTour(); tourEl.hidden = true; tour.i = -1;
+  document.body.classList.remove("touring"); board.classList.remove("touring");
+  focusEdges(null);
+  if (location.hash === "#tour") history.replaceState(null, "", location.pathname);
+}
+document.getElementById("playTour").addEventListener("click", () => tourOn() ? (tour.playing ? pauseTour() : playTour()) : startTour(0));
+tourPlayBtn.addEventListener("click", () => tour.playing ? pauseTour() : playTour());
+document.getElementById("tourPrev").addEventListener("click", () => goTour(tour.i - 1));
+document.getElementById("tourNext").addEventListener("click", () => goTour(tour.i + 1));
+document.getElementById("tourClose").addEventListener("click", stopTour);
+document.getElementById("tourDetails").addEventListener("click", () => { const id = TOUR[Math.max(0, tour.i)].id; stopTour(); select(id, false); });
+
 fit(false);
 const start = location.hash.slice(1);
 if (byId[start]) select(start, false);
+else if (start === "tour") startTour(0);
 addEventListener("hashchange", () => { const h = location.hash.slice(1); if (byId[h]) select(h, false); });
 </script>
 </body>

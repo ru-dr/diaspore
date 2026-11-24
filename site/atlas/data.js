@@ -958,3 +958,35 @@ const ZONES = [
   { key: "verdict",  label: "Verdict and outputs" },
   { key: "scale",    label: "Scale" }
 ];
+
+/* Auto tour: every feature in the order one run uses it.
+   via: the link that leads here, highlighted with the box. */
+const TOUR = [
+  { id: "cli", via: [], text: "Everything starts with one command: diaspore run --seed 8837421. The CLI is the front door. It reads the setup, runs the simulation and prints pass or the failure." },
+  { id: "seed", via: [["cli", "seed"]], text: "The seed 8837421 is the only thing that differs from any other run of the same setup. Every random choice in the run will trace back to this one number." },
+  { id: "yaml", via: [["cli", "yaml"]], text: "diaspore.yaml describes the run: which floret program to start and how many, the clients, the faults and the checkers. It is checked strictly and turned into the resolved config." },
+  { id: "streams", via: [["seed", "streams"]], text: "The seed is split into named streams (delay, drop, workload, floret/1 …) by hashing it with each name. Each part draws only from its own stream, so adding a fault never changes what the clients do." },
+  { id: "driver", via: [["yaml", "driver"], ["streams", "driver"]], text: "The process driver starts ./kvnode three times, as n1, n2 and n3, as real OS processes wired up through stdin and stdout. Each gets an init event with its peers and its own rand_seed." },
+  { id: "protocol", via: [["protocol", "lockstep"]], text: "Everything crossing that pipe follows protocol v1: three events in (init, message, timer), one reply out (done), one JSON line each. Each floret must answer init with protocol: 1 or the run stops before it starts." },
+  { id: "floret", via: [["driver", "floret"]], text: "The florets are the system under test, in any language. Each one loops: read an event, update its state, write one reply that describes what it wants to send, store and wait for." },
+  { id: "contract", via: [["contract", "floret"]], text: "For the same seed to give the same run, florets follow a few rules: no real clock, no network, no unseeded randomness, and anything that must survive a crash goes in store." },
+  { id: "workload", via: [["yaml", "workload"], ["streams", "workload"]], text: "The clients c1, c2 and c3 live inside Diaspore. Using the workload stream, c1 decides to send put x=5 to n1 at 1.25 ms." },
+  { id: "queue", via: [["workload", "queue"]], text: "That request goes into the event queue with its time. The queue always hands back the earliest event, and ties come out in the order they went in, so the order never changes between runs." },
+  { id: "loop", via: [["queue", "loop"]], text: "The main loop is the heart of the run. It pops the earliest event, delivers it, applies the reply and writes a trace line, over and over, on a single thread." },
+  { id: "clock", via: [["loop", "clock"]], text: "Before delivering, the loop moves the virtual clock straight to the event's time: 0 → 1250 µs. No real time passes, so 120 seconds of simulated time can finish in about a second." },
+  { id: "lockstep", via: [["loop", "lockstep"], ["lockstep", "driver"]], text: "The lockstep driver writes the event to n1 and waits for exactly one reply before anything else happens. Only one floret ever runs, so nothing can race. A 10 s real-time watchdog catches a floret that hangs." },
+  { id: "timers", via: [["loop", "timers"], ["timers", "queue"]], text: "n1's reply asks for a 300 ms election timer. Diaspore puts a timer event in the queue for later. That's how a floret waits without ever sleeping." },
+  { id: "storage", via: [["loop", "storage"]], text: "The reply also stores x=5. Diaspore saves it before anything else in the reply, like a disk that never fails. This is the only state that survives a crash." },
+  { id: "network", via: [["loop", "network"]], text: "n1 asks to send replicate to n2 and n3. The simulated network takes each send in order and draws its delay from the delay stream: n2's copy will arrive in 20 ms." },
+  { id: "faults", via: [["yaml", "faults"], ["faults", "network"]], text: "The fault rules roll their dice too. The drop rule (chance 0.02) rolls 0.013 for n3's copy, so it is lost. A different seed would roll differently." },
+  { id: "trace", via: [["loop", "trace"]], text: "Every step becomes one JSON line in trace.jsonl and feeds a running SHA-256. Thousands of steps later, that hash is the run's fingerprint." },
+  { id: "crash", via: [["crash", "queue"], ["crash", "driver"]], text: "At 400 ms a crash rule kills n1 without warning. Its timers are cancelled and messages to it are dropped. At 1.9 s a fresh n1 starts, and init hands back only what it had stored." },
+  { id: "failures", via: [["lockstep", "failures"]], text: "If a floret ever breaks the protocol (bad JSON, an unknown field, a send to itself, a hang), the run stops right there and counts as a failure, because the same seed will reproduce it." },
+  { id: "history", via: [["workload", "history"]], text: "Meanwhile the workload records what every client asked and got back, with start and end times: c1 put x=5 → ok, from 1250 to 41900. A timed-out request is recorded as unknown." },
+  { id: "checkers", via: [["history", "checkers"]], text: "At 120 s the run ends and the checkers read the history. acked-writes asks: was any write a client got ok for lost later? Here, x=5 was acked and then gone after n1's crash." },
+  { id: "pappus", via: [["checkers", "pappus"], ["trace", "pappus"]], text: "The failure is saved as runs/run-8837421.pappus: the seed, the resolved config, a hash of each floret program, the trace hash and the reason. That file is the whole bug." },
+  { id: "replay", via: [["pappus", "replay"], ["replay", "trace"]], text: "Anyone can run diaspore replay run-8837421.pappus and get the same run, step for step. Matching trace hashes prove it. After a fix, the failure is gone and the hash changes." },
+  { id: "determinism", via: [["determinism", "trace"]], text: "check-determinism guards that promise: it runs one seed twice and points to the first trace line that differs. CI runs it on every commit." },
+  { id: "dandelion", via: [["dandelion", "seed"], ["dandelion", "pappus"]], text: "You never know the failing seed up front. diaspore dandelion --seeds 1-500 runs hundreds of seeds in parallel, each still single-threaded inside, and writes a pappus for every one that fails." },
+  { id: "coordinator", via: [["coordinator", "dandelion"]], text: "To go wider, a coordinator hands seed ranges to workers on other machines and gives a dead worker's range to someone else. Rerunning a seed is safe, because the same seed always gives the same run." }
+];

@@ -11,6 +11,7 @@ Live at <https://ru-dr.github.io/diaspore/atlas/>. The `Pages` workflow deploys 
 - All content (positions, text, code, links) is in [`data.js`](data.js). `index.html` only draws it.
 - `code.real: true` means the snippet is copied from `main`. Update it when that code changes.
   Everything else is a proposed sketch and is labelled as one on the page.
+- The **Play tour** walkthrough is the `TOUR` list at the end of `data.js`: one step per feature, in run order, with the links to highlight (`via`) and the narration.
 - Links marked `main: 1` are drawn by default. The rest appear when a connected box is selected or
   "All links" is on.
 
