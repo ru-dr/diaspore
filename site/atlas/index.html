@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Diaspore Atlas</title>
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<script>try { const t = localStorage.getItem("atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch (e) {}</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=swap">
@@ -31,13 +32,20 @@
   --font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   color-scheme: light;
 }
+/* dark: follows the system unless the page's theme button picked light or dark */
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper: #121211; --white: #1C1C1A; --ink: #F5F4F0; --muted: #ADA99C; --line: #77736A; --border: #33322D; --dot: #2A2925;
     --green: #9CF27A; --amber: #FFE27A; --amber-text: #FFE27A; --coral: #FF9E8A;
     --code-bg: #0B0B0A; --code-fg: #F5F4F0; --code-dim: #8A877C;
     color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+    --paper: #121211; --white: #1C1C1A; --ink: #F5F4F0; --muted: #ADA99C; --line: #77736A; --border: #33322D; --dot: #2A2925;
+    --green: #9CF27A; --amber: #FFE27A; --amber-text: #FFE27A; --coral: #FF9E8A;
+    --code-bg: #0B0B0A; --code-fg: #F5F4F0; --code-dim: #8A877C;
+    color-scheme: dark;
 }
 * { box-sizing: border-box; }
 html, body { height: 100%; }
@@ -57,14 +65,21 @@ body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1
 .z-verdict  { --zc: #2F76C2; --zt: #E4EEFA; }
 .z-scale    { --zc: #18978A; --zt: #DFF4F1; }
 @media (prefers-color-scheme: dark) {
-  .z-input    { --zc: #FFD25E; --zt: #2B2614; }
-  .z-world    { --zc: #FF9E8A; --zt: #2F1B18; }
-  .z-engine   { --zc: #9CF27A; --zt: #182615; }
-  .z-boundary { --zc: #B4C2D1; --zt: #1D2126; }
-  .z-florets  { --zc: #C3AEFF; --zt: #221D33; }
-  .z-verdict  { --zc: #8CC4F2; --zt: #16212D; }
-  .z-scale    { --zc: #74E0D2; --zt: #132826; }
+  :root:not([data-theme="light"]) .z-input    { --zc: #FFD25E; --zt: #2B2614; }
+  :root:not([data-theme="light"]) .z-world    { --zc: #FF9E8A; --zt: #2F1B18; }
+  :root:not([data-theme="light"]) .z-engine   { --zc: #9CF27A; --zt: #182615; }
+  :root:not([data-theme="light"]) .z-boundary { --zc: #B4C2D1; --zt: #1D2126; }
+  :root:not([data-theme="light"]) .z-florets  { --zc: #C3AEFF; --zt: #221D33; }
+  :root:not([data-theme="light"]) .z-verdict  { --zc: #8CC4F2; --zt: #16212D; }
+  :root:not([data-theme="light"]) .z-scale    { --zc: #74E0D2; --zt: #132826; }
 }
+:root[data-theme="dark"] .z-input    { --zc: #FFD25E; --zt: #2B2614; }
+:root[data-theme="dark"] .z-world    { --zc: #FF9E8A; --zt: #2F1B18; }
+:root[data-theme="dark"] .z-engine   { --zc: #9CF27A; --zt: #182615; }
+:root[data-theme="dark"] .z-boundary { --zc: #B4C2D1; --zt: #1D2126; }
+:root[data-theme="dark"] .z-florets  { --zc: #C3AEFF; --zt: #221D33; }
+:root[data-theme="dark"] .z-verdict  { --zc: #8CC4F2; --zt: #16212D; }
+:root[data-theme="dark"] .z-scale    { --zc: #74E0D2; --zt: #132826; }
 .group .s { stroke: var(--ink); fill: none; opacity: .7; }
 .group .gbg { fill: var(--paper); }
 .group .gt { font-family: var(--font-body); font-weight: 700; font-size: 19px; fill: var(--ink); letter-spacing: -.01em; }
@@ -103,7 +118,8 @@ body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1
   display: flex; align-items: center; gap: 14px; pointer-events: none; }
 .brand img { height: 46px; width: auto; display: block; }
 .brand .lockup-dark { display: none; }
-@media (prefers-color-scheme: dark) { .brand .lockup-light { display: none; } .brand .lockup-dark { display: block; } }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .brand .lockup-light { display: none; } :root:not([data-theme="light"]) .brand .lockup-dark { display: block; } }
+:root[data-theme="dark"] .brand .lockup-light { display: none; } :root[data-theme="dark"] .brand .lockup-dark { display: block; }
 .brand .sep { width: 1px; height: 28px; background: var(--border); }
 .brand .name { font-family: var(--font-mark); font-weight: 600; font-size: 22px; letter-spacing: -.01em; line-height: 1; }
 .brand .name span { display: block; font-family: var(--font-body); font-size: 12px; color: var(--muted); margin-top: 4px; }
@@ -216,6 +232,8 @@ pre .st { color: #9CF27A; }
   <span class="sep"></span>
   <button type="button" id="allLinks" aria-pressed="false">All links</button>
   <button type="button" id="layoutBtn" title="Arrange the map to fit this screen">Layout: Auto</button>
+  <span class="sep"></span>
+  <button type="button" id="themeBtn" title="Switch between light and dark">◐ Auto</button>
 </div>
 
 <div class="key" aria-label="Status key">
@@ -680,6 +698,17 @@ function arrange(animated) {
   else fit(animated);
 }
 function onResize() { if (layoutMode === "auto") arrange(false); else if (drawer.hidden && !tourOn()) fit(false); }
+const THEMES = ["auto", "light", "dark"], themeBtn = document.getElementById("themeBtn");
+const themeIcon = { auto: "◐", light: "☀", dark: "☾" };
+let themeMode = document.documentElement.dataset.theme || "auto";
+function showTheme() { themeBtn.textContent = themeIcon[themeMode] + " " + themeMode[0].toUpperCase() + themeMode.slice(1); }
+themeBtn.addEventListener("click", () => {
+  themeMode = THEMES[(THEMES.indexOf(themeMode) + 1) % THEMES.length];
+  if (themeMode === "auto") delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = themeMode;
+  try { themeMode === "auto" ? localStorage.removeItem("atlas-theme") : localStorage.setItem("atlas-theme", themeMode); } catch (e) {}
+  showTheme();
+});
+showTheme();
 const MODES = ["auto", "wide", "square", "tall"];
 layoutBtn.addEventListener("click", () => {
   layoutMode = MODES[(MODES.indexOf(layoutMode) + 1) % MODES.length];
