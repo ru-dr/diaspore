@@ -27,8 +27,8 @@ merely avoided.
 Diaspore pulls every source of that randomness into one place and drives it from a single seed.
 Same seed, same execution, as long as the florets follow the rules below. A bug stops being an anecdote and becomes an address.
 
-> **Status:** in development. The seed streams and the virtual clock are built and tested; the
-> rest of this README describes the v0.1 target, and the [plan](docs/plan.md) tracks progress.
+> **Status:** in development. The virtual clock, event queue, seed streams, and floret protocol v1
+> are built and tested; the rest of this README describes the v0.1 target, and the [plan](docs/plan.md) tracks progress.
 
 ---
 
@@ -235,7 +235,7 @@ The full reference, including terms deliberately rejected, is in
 |---|---|
 | [`docs/design.md`](docs/design.md) | The pieces, the event model, the decisions, and why |
 | [`docs/plan.md`](docs/plan.md) | Schedule, checkpoint tracker, milestones, and gates |
-| [`docs/build-guide.pdf`](docs/build-guide.pdf) | Every checkpoint, with its goal, tests, and done-when list |
+| [`docs/build/build-guide.pdf`](docs/build/build-guide.pdf) | Every checkpoint, with its goal, tests, and done-when list |
 | [`docs/naming.md`](docs/naming.md) | Naming reference, including terms deliberately rejected |
 | [`docs/brand-guide.md`](docs/brand-guide.md) | Logo, color, gradient, and usage rules, with all brand assets |
 | [Atlas](https://ru-dr.github.io/diaspore/atlas/) ([`site/atlas`](site/atlas)) | Interactive map of every component: inputs, outputs, code, and examples |

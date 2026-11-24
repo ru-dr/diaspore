@@ -3,7 +3,7 @@
 October 29 to December 14, 2026. A team of three.
 
 This file tracks progress. The full checkpoint details, with "Decide first" questions and
-"Tests first" lists, are in the build guide: [`build-guide.pdf`](build-guide.pdf). If the two ever
+"Tests first" lists, are in the build guide: [`build-guide.pdf`](build/build-guide.pdf). If the two ever
 disagree, the build guide wins.
 
 Every must-have ships. The gates below only ever drop bonus items. The one exception is CP24,
@@ -49,6 +49,8 @@ which has a smaller fallback at Gate 2.
 
 ## Checkpoints
 
+Who owns each checkpoint and what it waits on: [`checkpoint-order.md`](checkpoint-order.md).
+
 ### Phase 0: Ground
 
 - [x] **CP0** A repo that tests itself: CI runs the tests on Linux, macOS, and Windows
@@ -56,15 +58,15 @@ which has a smaller fallback at Gate 2.
 ### Phase 1: The deterministic core
 
 - [x] **CP1** Virtual clock: a clock that moves only when the simulator moves it
-- [ ] **CP2** Event queue: always hands back the earliest event
-- [ ] **CP3** One seed, many streams: every random choice comes from one seed
+- [x] **CP2** Event queue: always hands back the earliest event
+- [x] **CP3** One seed, many streams: every random choice comes from one seed
 - [ ] **CP4** The loop: take the next event, run its handler, repeat
 - [ ] **CP5** Trace and hash: every run gets a fingerprint
 - [ ] **CP6** Simulated network: messages travel through Diaspore with seeded delay
 
 ### Phase 2: Real processes and the protocol
 
-- [ ] **CP7** Protocol spec v1: `PROTOCOL.md` and JSON Schema files
+- [x] **CP7** Protocol spec v1: `PROTOCOL.md` and JSON Schema files
 - [ ] **CP8** Talking to one process: start a floret, send `init`, read the reply
 - [ ] **CP9** Lockstep driver: one event, one reply, repeat, with a hang watchdog
 - [ ] **CP10** Timers: florets can set and cancel timers
