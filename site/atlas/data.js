@@ -948,11 +948,16 @@ const EDGES = [
   ["dandelion", "pappus", "one per failing seed", { dashed: 1 }]
 ];
 
+/* Outer frames that group zones by where the code runs. Members must sit next to each other in every layout. */
+const GROUPS = [
+  { label: "Diaspore core", note: "one process, one thread, fully deterministic", members: ["world", "engine"] }
+];
+
 /* Zones are drawn around their boxes automatically. */
 const ZONES = [
   { key: "input",    label: "You give" },
   { key: "world",    label: "Seeded world" },
-  { key: "engine",   label: "Engine · one thread" },
+  { key: "engine",   label: "Engine" },
   { key: "boundary", label: "Process boundary" },
   { key: "florets",  label: "Florets · OS processes" },
   { key: "verdict",  label: "Verdict and outputs" },

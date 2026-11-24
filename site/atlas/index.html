@@ -65,6 +65,10 @@ body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1
   .z-verdict  { --zc: #8CC4F2; --zt: #16212D; }
   .z-scale    { --zc: #74E0D2; --zt: #132826; }
 }
+.group .s { stroke: var(--ink); fill: none; opacity: .7; }
+.group .gbg { fill: var(--paper); }
+.group .gt { font-family: var(--font-body); font-weight: 700; font-size: 19px; fill: var(--ink); letter-spacing: -.01em; }
+.group .gn { font-family: var(--font-mono); font-size: 13px; fill: var(--muted); }
 .zone .f { fill: var(--zt); stroke: none; }
 .zone .s { stroke: var(--zc); fill: none; opacity: .55; }
 .zone .hdr { fill: var(--zc); }
@@ -146,6 +150,7 @@ button:focus-visible { outline: 2px solid var(--coral); outline-offset: 1px; }
   .key { display: none; }
 }
 .drawer .eyebrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font: 12px var(--font-mono); color: var(--muted); }
+.gtag { display: inline-block; font: 600 12px var(--font-body); border: 1px solid var(--ink); color: var(--ink); padding: 2px 7px; }
 .ztag { display: inline-block; font: 600 12px var(--font-body); letter-spacing: .01em; background: var(--zc, var(--ink)); color: var(--white); padding: 3px 8px; }
 .drawer h2 { font-family: var(--font-mark); font-weight: 700; font-size: 30px; letter-spacing: -.025em; line-height: 1.1; margin: 2px 0 0; }
 .drawer h3 { font-family: var(--font-label); font-weight: 600; font-size: 16px; letter-spacing: -.01em; margin: 10px 0 -4px; }
@@ -283,6 +288,24 @@ for (const z of ZONES) {
   txt.textContent = z.label;
   z.size = () => pill.setAttribute("width", txt.getComputedTextLength() + 32);
 }
+drawGroups();
+}
+/* outer frames (e.g. Diaspore core) around neighbouring zones; the label sits on the top edge like a legend */
+const GM = 24, GTOP = 34;
+function drawGroups() {
+  for (const gr of (typeof GROUPS === "undefined" ? [] : GROUPS)) {
+    const zs = ZONES.filter(z => gr.members.includes(z.key));
+    const x0 = Math.min(...zs.map(z => z.x)) - GM, y0 = Math.min(...zs.map(z => z.y)) - GTOP;
+    const x1 = Math.max(...zs.map(z => z.x + z.w)) + GM, y1 = Math.max(...zs.map(z => z.y + z.h)) + GM;
+    Object.assign(gr, { x: x0, y: y0, w: x1 - x0, h: y1 - y0 });
+    const g = el("g", { class: "group" });
+    zl.insertBefore(g, zl.firstChild);
+    g.appendChild(sketchRect(x0, y0, gr.w, gr.h, seedOf(gr.label), false, true));
+    const bg = el("rect", { class: "gbg", x: x0 + 16, y: y0 - 13, width: 10, height: 26 }, g);
+    const t = el("text", { class: "gt", x: x0 + 26, y: y0 + 7 }, g); t.textContent = gr.label;
+    const nt = el("text", { class: "gn", y: y0 + 6 }, g); nt.textContent = gr.note;
+    gr.size = () => { const tw = t.getComputedTextLength(); nt.setAttribute("x", x0 + 26 + tw + 12); bg.setAttribute("width", tw + nt.getComputedTextLength() + 32); };
+  }
 }
 
 /* edges */
@@ -416,8 +439,10 @@ function setGrid(c) { const g = 24 * c.k; document.body.style.backgroundSize = `
 function apply() { view.setAttribute("transform", `translate(${cam.x},${cam.y}) scale(${cam.k})`); zoomLabel.textContent = Math.round(cam.k * 100) + "%"; setGrid(cam); }
 function zoomAt(px, py, k2) { k2 = clampK(k2); cam.x = px - (px - cam.x) * (k2 / cam.k); cam.y = py - (py - cam.y) * (k2 / cam.k); cam.k = k2; apply(); }
 let B = { x: 0, y: 0, w: 1, h: 1 };
-function computeBounds() { const x0 = Math.min(...ZONES.map(z => z.x)), y0 = Math.min(...ZONES.map(z => z.y));
-  B = { x: x0, y: y0, w: Math.max(...ZONES.map(z => z.x + z.w)) - x0, h: Math.max(...ZONES.map(z => z.y + z.h)) - y0 }; }
+function computeBounds() { const all = [...ZONES, ...(typeof GROUPS === "undefined" ? [] : GROUPS)];
+  const x0 = Math.min(...all.map(z => z.x)), y0 = Math.min(...all.map(z => z.y)) - 16;
+  B = { x: x0, y: y0, w: Math.max(...all.map(z => z.x + z.w)) - x0, h: Math.max(...all.map(z => z.y + z.h)) - y0 }; }
+const sizeLabels = () => { ZONES.forEach(z => z.size()); (typeof GROUPS === "undefined" ? [] : GROUPS).forEach(g => g.size && g.size()); };
 /* camera glide: move the whole map as one GPU layer (CSS transform on the <svg>),
    then commit the final camera with a single SVG redraw. Redrawing the sketch every frame is what made it lag. */
 let anim = 0, live = null;
@@ -522,6 +547,7 @@ function highlight(src) {
 /* selection */
 const statusText = { built: "built (in main)", designing: "being designed", planned: "planned" };
 const zoneOf = n => (ZONES.find(z => z.key === n.g) || {}).label || "";
+const groupOf = n => ((typeof GROUPS === "undefined" ? [] : GROUPS).find(g => g.members.includes(n.g)) || {}).label || "";
 
 function focusEdges(id) {
   const conns = id ? EDGES.filter(e => e[0] === id || e[1] === id) : [];
@@ -540,7 +566,7 @@ const dl = rows => `<dl>${rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}<
 function detailHTML(n, conns) {
   const id = n.id;
   return `
-    <div class="headbar"><span class="ztag">${esc(zoneOf(n))}</span><span class="path">${esc(n.file)}</span>
+    <div class="headbar"><span class="ztag">${esc(zoneOf(n))}</span>${groupOf(n) ? `<span class="gtag">${esc(groupOf(n))}</span>` : ""}<span class="path">${esc(n.file)}</span>
       <button class="close" type="button" aria-label="Close details"><svg viewBox="0 0 12 12" width="12" height="12" aria-hidden="true"><path d="M1.5 1.5l9 9M10.5 1.5l-9 9" stroke="currentColor" stroke-width="1.6" fill="none"/></svg></button></div>
     <h2>${esc(n.label)}</h2>
     <div class="chips"><span class="chip ${n.status}">● ${statusText[n.status]}</span><span class="chip">${n.cp === "—" ? "cross-cutting" : esc(n.cp)}</span><span class="chip">owner: ${esc(n.owner)}</span><span class="chip">${esc(n.adr)}</span></div>
@@ -591,9 +617,9 @@ function closeDrawer() {
 const LAYOUTS = {
   wide:   [[["input"], ["world"], ["engine"], ["boundary", "florets"], ["verdict", "scale"]]],
   square: [[["input"], ["world"], ["engine"]], [["verdict", "scale"], ["boundary", "florets"]]],
-  tall:   [[["input"], ["world"]], [["engine"]], [["boundary", "florets"]], [["verdict", "scale"]]]
+  tall:   [[["input"]], [["world"], ["engine"]], [["boundary", "florets"]], [["verdict", "scale"]]]
 };
-const GAPX = 56, GAPY = 70;
+const GAPX = 64, GAPY = 84;
 // each zone's boxes, relative to the zone's top-left corner (taken from data.js)
 const zoneShape = {};
 for (const z of ZONES) {
@@ -629,7 +655,7 @@ function applyLayout(name) {
   const { pos } = packLayout(LAYOUTS[name]);
   for (const k in pos) { const sh = zoneShape[k]; for (const { n, dx, dy } of sh.rel) { n.x = pos[k].x + sh.ox + dx; n.y = pos[k].y + sh.oy + dy; } }
   drawZones(); drawEdges(); drawNodes();
-  computeBounds(); ZONES.forEach(z => z.size()); placeLabels();
+  computeBounds(); sizeLabels(); placeLabels();
   // keep whatever is focused focused
   if (!drawer.hidden && byId[location.hash.slice(1)]) focusEdges(location.hash.slice(1));
   if (tourOn() && tour.i >= 0) tourFocus(TOUR[tour.i]);
@@ -763,7 +789,7 @@ drawer.addEventListener("touchmove", () => { if (tour.active && tour.playing) pa
 ctrlPlay.addEventListener("click", () => tourOn() ? (tour.playing ? pauseTour() : playTour()) : startTour(0));
 
 arrange(false);
-if (document.fonts) document.fonts.ready.then(() => { ZONES.forEach(z => z.size()); placeLabels(); });
+if (document.fonts) document.fonts.ready.then(() => { sizeLabels(); placeLabels(); });
 const start = location.hash.slice(1);
 if (byId[start]) select(start, false);
 else if (start === "tour") startTour(0);
