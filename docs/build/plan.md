@@ -56,15 +56,15 @@ which has a smaller fallback at Gate 2.
 ### Phase 1: The deterministic core
 
 - [x] **CP1** Virtual clock: a clock that moves only when the simulator moves it
-- [ ] **CP2** Event queue: always hands back the earliest event
-- [ ] **CP3** One seed, many streams: every random choice comes from one seed
+- [x] **CP2** Event queue: always hands back the earliest event
+- [x] **CP3** One seed, many streams: every random choice comes from one seed
 - [ ] **CP4** The loop: take the next event, run its handler, repeat
 - [ ] **CP5** Trace and hash: every run gets a fingerprint
 - [ ] **CP6** Simulated network: messages travel through Diaspore with seeded delay
 
 ### Phase 2: Real processes and the protocol
 
-- [ ] **CP7** Protocol spec v1: `PROTOCOL.md` and JSON Schema files
+- [x] **CP7** Protocol spec v1: `PROTOCOL.md` and JSON Schema files
 - [ ] **CP8** Talking to one process: start a floret, send `init`, read the reply
 - [ ] **CP9** Lockstep driver: one event, one reply, repeat, with a hang watchdog
 - [ ] **CP10** Timers: florets can set and cancel timers
