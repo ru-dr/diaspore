@@ -43,9 +43,10 @@
 html, body { height: 100%; }
 body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); overflow: hidden; }
 
-#board { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+#board { position: fixed; inset: 0; width: 100%; height: 100%; display: block; transform-origin: 0 0; touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 #board.panning { cursor: grabbing; }
-#gridDot { fill: var(--dot); }
+body { background-image: radial-gradient(circle, var(--dot) 1.2px, transparent 1.4px); background-size: 24px 24px; }
+#board.gliding { will-change: transform; }
 
 /* zones: one colour each, tinted panel + coloured header */
 .z-input    { --zc: #B98400; --zt: #FDF4DA; }
@@ -188,9 +189,7 @@ pre .st { color: #9CF27A; }
 <body>
 
 <svg id="board" role="img" aria-label="Whiteboard map of Diaspore's components and how they connect. Drag to pan, scroll or pinch to zoom, click a box for details.">
-  <defs><pattern id="grid" width="24" height="24" patternUnits="userSpaceOnUse"><circle id="gridDot" cx="1.5" cy="1.5" r="1.2"></circle></pattern></defs>
   <g id="view">
-    <rect x="-5000" y="-5000" width="12000" height="12000" fill="url(#grid)"></rect>
     <g id="zones"></g><g id="edges"></g><g id="nodes"></g><g id="labels"></g>
   </g>
 </svg>
@@ -413,19 +412,34 @@ for (const n of NODES) {
 const cam = { x: 0, y: 0, k: 1 };
 const zoomLabel = document.getElementById("zoomLabel");
 const clampK = k => Math.min(3, Math.max(0.2, k));
-function apply() { view.setAttribute("transform", `translate(${cam.x},${cam.y}) scale(${cam.k})`); zoomLabel.textContent = Math.round(cam.k * 100) + "%"; }
+function setGrid(c) { const g = 24 * c.k; document.body.style.backgroundSize = `${g}px ${g}px`; document.body.style.backgroundPosition = `${c.x}px ${c.y}px`; }
+function apply() { view.setAttribute("transform", `translate(${cam.x},${cam.y}) scale(${cam.k})`); zoomLabel.textContent = Math.round(cam.k * 100) + "%"; setGrid(cam); }
 function zoomAt(px, py, k2) { k2 = clampK(k2); cam.x = px - (px - cam.x) * (k2 / cam.k); cam.y = py - (py - cam.y) * (k2 / cam.k); cam.k = k2; apply(); }
 let B = { x: 0, y: 0, w: 1, h: 1 };
 function computeBounds() { const x0 = Math.min(...ZONES.map(z => z.x)), y0 = Math.min(...ZONES.map(z => z.y));
   B = { x: x0, y: y0, w: Math.max(...ZONES.map(z => z.x + z.w)) - x0, h: Math.max(...ZONES.map(z => z.y + z.h)) - y0 }; }
-let anim = 0;
-function animateTo(target) {
-  cancelAnimationFrame(anim);
+/* camera glide: move the whole map as one GPU layer (CSS transform on the <svg>),
+   then commit the final camera with a single SVG redraw. Redrawing the sketch every frame is what made it lag. */
+let anim = 0, live = null;
+const ease = { out: t => 1 - Math.pow(1 - t, 3), inOut: t => t < .5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2 };
+function stopAnim() {
+  cancelAnimationFrame(anim); anim = 0;
+  if (live) { Object.assign(cam, live); live = null; board.style.transform = ""; board.classList.remove("gliding"); apply(); }
+}
+function animateTo(target, opts = {}) {
+  stopAnim();
   if (matchMedia("(prefers-reduced-motion: reduce)").matches) { Object.assign(cam, target); apply(); return; }
-  const from = { ...cam }, t0 = performance.now(), D = 380;
-  const step = now => { const t = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - t, 3);
-    cam.x = from.x + (target.x - from.x) * e; cam.y = from.y + (target.y - from.y) * e; cam.k = from.k + (target.k - from.k) * e; apply();
-    if (t < 1) anim = requestAnimationFrame(step); };
+  const from = { ...cam }, t0 = performance.now(), D = opts.duration || 380, f = opts.ease || ease.out;
+  live = { ...from };
+  board.classList.add("gliding");
+  const step = now => {
+    const t = Math.min(1, (now - t0) / D), e = f(t);
+    live.x = from.x + (target.x - from.x) * e; live.y = from.y + (target.y - from.y) * e; live.k = from.k + (target.k - from.k) * e;
+    const sc = live.k / from.k;
+    board.style.transform = `translate(${live.x - sc * from.x}px, ${live.y - sc * from.y}px) scale(${sc})`;
+    setGrid(live); zoomLabel.textContent = Math.round(live.k * 100) + "%";
+    if (t < 1) anim = requestAnimationFrame(step); else stopAnim();
+  };
   anim = requestAnimationFrame(step);
 }
 const drawer = document.getElementById("drawer");
@@ -443,6 +457,7 @@ function centerOn(n) { const k = Math.max(cam.k, 0.8); animateTo({ k, x: usableW
 const pointers = new Map();
 let dragStart = null, moved = false, pinch = null, downNode = null;
 board.addEventListener("pointerdown", e => {
+  stopAnim();
   board.setPointerCapture(e.pointerId);
   pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   const ng = e.target.closest(".node");
@@ -473,7 +488,7 @@ function endPointer(e) {
 }
 board.addEventListener("pointerup", endPointer);
 board.addEventListener("pointercancel", e => { moved = true; endPointer(e); });
-board.addEventListener("wheel", e => { e.preventDefault(); cancelAnimationFrame(anim); if (tourOn()) pauseTour(); zoomAt(e.clientX, e.clientY, cam.k * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
+board.addEventListener("wheel", e => { e.preventDefault(); stopAnim(); if (tourOn()) pauseTour(); zoomAt(e.clientX, e.clientY, cam.k * Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))); }, { passive: false });
 document.getElementById("zoomIn").addEventListener("click", () => zoomAt(innerWidth / 2, innerHeight / 2, cam.k * 1.25));
 document.getElementById("zoomOut").addEventListener("click", () => zoomAt(innerWidth / 2, innerHeight / 2, cam.k / 1.25));
 document.getElementById("fit").addEventListener("click", () => fit(true));
@@ -662,7 +677,10 @@ function tourFocus(step) {
     if (on) edgeLayer.appendChild(e.g);
   }
 }
-function tourCamera(n) { centerOn(n); }
+function tourCamera(n) {
+  const k = Math.max(cam.k, 0.8);
+  requestAnimationFrame(() => animateTo({ k, x: usableW() / 2 - n.x * k, y: usableH() / 2 - n.y * k }, { duration: 650, ease: ease.inOut }));
+}
 function syncPlayLabels() {
   const b = document.getElementById("tourPlay");
   if (b) b.textContent = tour.playing ? "Pause" : (tour.i >= TOUR.length ? "Replay" : "Play");
