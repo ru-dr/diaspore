@@ -13,7 +13,7 @@ Live at <https://ru-dr.github.io/diaspore/atlas/>. The `Pages` workflow deploys 
   Everything else is a proposed sketch and is labelled as one on the page.
 - The **Play tour** walkthrough is the `TOUR` list at the end of `data.js`: one step per feature, in run order, with the links to highlight (`via`) and the narration.
 - **Layout** arranges whole zones to fit the screen (`LAYOUTS` in `index.html`: wide, square, tall; Auto picks the closest shape). Positions in `data.js` only set how boxes sit inside their zone.
-- `GROUPS` in `data.js` draws outer frames around neighbouring zones (today: **Diaspore core** = Seeded world + Engine). Members must sit next to each other in every layout.
+- `GROUPS` in `data.js` draws outer frames around neighbouring zones (Setup, Diaspore core, Florets and protocol, Results). Members must sit next to each other in every layout.
 - Links marked `main: 1` are drawn by default. The rest appear when a connected box is selected or
   "All links" is on.
 

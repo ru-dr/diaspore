@@ -950,7 +950,10 @@ const EDGES = [
 
 /* Outer frames that group zones by where the code runs. Members must sit next to each other in every layout. */
 const GROUPS = [
-  { label: "Diaspore core", note: "one process, one thread, fully deterministic", members: ["world", "engine"] }
+  { label: "Setup", note: "what you give a run", members: ["input"] },
+  { label: "Diaspore core", note: "one process, one thread, fully deterministic", members: ["world", "engine"] },
+  { label: "Florets and protocol", note: "your code in separate processes, behind a strict line protocol", members: ["boundary", "florets"] },
+  { label: "Results", note: "judge the run, replay it, sweep many seeds", members: ["verdict", "scale"] }
 ];
 
 /* Zones are drawn around their boxes automatically. */
