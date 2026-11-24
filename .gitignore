@@ -3,8 +3,8 @@
 *.test
 *.out
 bin/
-diaspore
-loadgen
+/diaspore
+/loadgen
 
 # Terraform
 .terraform/
