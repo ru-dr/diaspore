@@ -2,6 +2,7 @@ package seed
 
 import "testing"
 
+// draw returns the first n numbers from the named stream.
 func draw(s *Source, name string, n int) []uint64 {
 	gen := s.Stream(name)
 	out := make([]uint64, n)
@@ -38,6 +39,7 @@ func TestDifferentSeedsDifferentNumbers(t *testing.T) {
 	}
 }
 
+// Adding a new stream must not shift the numbers of an existing one.
 func TestNewStreamDoesNotChangeOthers(t *testing.T) {
 	first := draw(NewSource(42), "delay", 1000)
 
