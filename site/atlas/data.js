@@ -331,7 +331,7 @@ func (s *Sim) applyTimers(node string, d *protocol.Done) {
 `queue: timer n1/election @321250
 (the older election timer @300000 is now stale and skipped)` } },
 
-{ id: "storage", label: "Storage", sub: "survives crashes", g: "engine", x: 1400, y: 520,
+{ id: "storage", label: "Storage", sub: "survives crashes", g: "engine", x: 990, y: 690,
   cp: "CP11", owner: "Ash", status: "planned", adr: "ADR 0010, PROTOCOL.md §7", file: "internal/sim/storage.go",
   what: "The only state a floret keeps through a crash. Diaspore holds it for the floret, like a disk that never fails.",
   takes: [["store", "map of key → string, or null to delete, from a reply"]],
@@ -440,7 +440,7 @@ func (s *Sim) restart(node string) error {
 @1900000 → {"type":"init","node":"n1","time":1900000,"stored":{"term":"1","x":"5"},"rand_seed":55120931,...}` } },
 
 /* ───────────── Process boundary ───────────── */
-{ id: "lockstep", label: "Lockstep driver", sub: "one event, one reply", g: "boundary", x: 1810, y: 350,
+{ id: "lockstep", label: "Lockstep driver", sub: "one event, one reply", g: "boundary", x: 1400, y: 1130,
   cp: "CP9", owner: "Ash", status: "planned", adr: "design §4, ADR 0010", file: "internal/capitulum/",
   what: "Sends one event to one floret and waits for its one reply before anything else happens. This is what keeps runs identical.",
   takes: [["event", "protocol.Init, Message or Timer for one floret"]],
@@ -474,7 +474,7 @@ func (s *Sim) restart(node string) error {
   example: { in: `n1 ← {"type":"timer","time":321250,"id":"election"}`, out: `n1 → {"type":"done","store":{"term":"1"},"send":[...],"set_timers":[...]}
 round trip ≈ 7.7 µs for a Go floret (E4)` } },
 
-{ id: "driver", label: "Process driver", sub: "spawn · pipes · kill", g: "boundary", x: 1810, y: 180,
+{ id: "driver", label: "Process driver", sub: "spawn · pipes · kill", g: "boundary", x: 1400, y: 1300,
   cp: "CP8", owner: "Ash", status: "planned", adr: "ADR 0006", file: "internal/capitulum/process.go",
   what: "Starts each floret as a real OS process and connects to it through stdin, stdout and stderr.",
   takes: [["florets.command", "argv from the config"], ["node name", "n1, n2, n3"], ["init", "protocol.NewInit(...)"]],
@@ -503,7 +503,7 @@ round trip ≈ 7.7 µs for a Go floret (E4)` } },
 `→ {"type":"init","protocol":1,"node":"n1","peers":["n2","n3"],"rand_seed":918273,"time":0,"stored":{}}
 ← {"type":"done","protocol":1,"set_timers":[{"id":"election","after":300000}]}` } },
 
-{ id: "protocol", label: "Floret protocol v1", sub: "3 events in, 1 reply out", g: "boundary", x: 1810, y: 520,
+{ id: "protocol", label: "Floret protocol v1", sub: "3 events in, 1 reply out", g: "boundary", x: 990, y: 1130,
   cp: "CP7", owner: "Ash", status: "built", adr: "ADR 0006–0009", file: "internal/protocol/protocol.go",
   what: "The contract between Diaspore and any floret: three events in (init, message, timer), one reply out (done), as JSON lines.",
   takes: [["reply line", "[]byte from a floret's stdout"], ["event fields", "to build init, message, timer"]],
@@ -544,7 +544,7 @@ func DecodeReply(line []byte) (*Done, error) {
 }` },
   example: { in: `{"type":"done","set_timer":[{"id":"e","after":5}]}`, out: `invalid reply: json: unknown field "set_timer"` } },
 
-{ id: "failures", label: "Protocol breaks", sub: "stop the run", g: "boundary", x: 1810, y: 690,
+{ id: "failures", label: "Protocol breaks", sub: "stop the run", g: "boundary", x: 990, y: 1300,
   cp: "CP8, CP9", owner: "Ash", status: "planned", adr: "ADR 0010, PROTOCOL.md §8", file: "internal/capitulum/",
   what: "When a floret breaks the protocol, the run stops and counts as a failure, because the same seed reproduces it.",
   takes: [["errors", "from the lockstep driver and process driver"]],
@@ -571,7 +571,7 @@ floret n2: no reply within 10s of real time` },
 wrote runs/run-8837421.pappus` } },
 
 /* ───────────── Florets ───────────── */
-{ id: "floret", label: "Florets n1 · n2 · n3", sub: "your program, any language", g: "florets", x: 2220, y: 180,
+{ id: "floret", label: "Florets n1 · n2 · n3", sub: "your program, any language", g: "florets", x: 1400, y: 1520,
   cp: "CP17, CP22", owner: "HK, Ash", status: "planned", adr: "design §14", file: "examples/kv/main.go",
   what: "The system under test. A separate program that loops: read one event, update its state, write one reply.",
   takes: [["stdin", "events, one JSON line each: init, message, timer"]],
@@ -613,7 +613,7 @@ func main() {
 }` },
   example: { in: `{"type":"message","time":1250,"from":"c1","body":{"op":"put","key":"x","value":5}}`, out: `{"type":"done","store":{"x":"5"},"send":[{"to":"c1","body":{"op":"put_ok","key":"x"}}]}` } },
 
-{ id: "contract", label: "Determinism rules", sub: "what florets must do", g: "florets", x: 2220, y: 350,
+{ id: "contract", label: "Determinism rules", sub: "what florets must do", g: "florets", x: 990, y: 1520,
   cp: "—", owner: "everyone", status: "built", adr: "design §12, PROTOCOL.md §6", file: "PROTOCOL.md",
   what: "The rules a floret follows so that the same seed gives the same run. Diaspore can't enforce them, but check-determinism catches breaks.",
   takes: [["a floret", "any language"]],
@@ -668,7 +668,7 @@ print(json.dumps(reply), flush=True)
 c2 → n3 {"op":"get","key":"x"}          @3400` } },
 
 /* ───────────── Verdict and outputs ───────────── */
-{ id: "history", label: "History", sub: "history.jsonl", g: "verdict", x: 2630, y: 180,
+{ id: "history", label: "History", sub: "history.jsonl", g: "verdict", x: 170, y: 1130,
   cp: "CP16", owner: "HK", status: "planned", adr: "design §8, §10", file: "internal/workload/history.go",
   what: "What every client asked and got back, with times. The evidence the checkers judge.",
   takes: [["invoke", "client, op, key, value, start time"], ["complete", "result and end time, or unknown on timeout"]],
@@ -692,7 +692,7 @@ c2 → n3 {"op":"get","key":"x"}          @3400` } },
 }` },
   example: { in: "c1 put x=5 acked at 41900", out: `{"client":"c1","op":"put","key":"x","value":5,"result":"ok","start":1250,"end":41900}` } },
 
-{ id: "checkers", label: "Checkers", sub: "acked-writes · linearizability", g: "verdict", x: 2630, y: 350,
+{ id: "checkers", label: "Checkers", sub: "acked-writes · linearizability", g: "verdict", x: 170, y: 1300,
   cp: "CP18, CP21", owner: "HK", status: "planned", adr: "design §9", file: "internal/check/",
   what: "Read the history after the run and decide whether a rule broke. This is where a bug becomes a failure.",
   takes: [["history", "[]Op"], ["checkers:", "names from the config"]],
@@ -729,7 +729,7 @@ func (ackedWrites) Check(h []workload.Op) *Failure {
 `c1 put x=5 ok [1250..41900]
 c2 get x → (missing) [2000000..2050000]`, out: "FAIL acked-writes at 2.050000s: write x=5 was acked, then lost" } },
 
-{ id: "pappus", label: ".pappus file", sub: "a failure you can replay", g: "verdict", x: 2630, y: 520,
+{ id: "pappus", label: ".pappus file", sub: "a failure you can replay", g: "verdict", x: 580, y: 1300,
   cp: "CP19", owner: "Rudra", status: "designing", adr: "ADR 0013 (proposed)", file: "internal/pappus/pappus.go",
   what: "The replay file written when a run fails. Everything needed to reproduce the failure on another machine.",
   takes: [["seed", "uint64, at most 2^53 − 1"], ["config.Config", "resolved"], ["floret hashes", "SHA-256 of each program"], ["trace hash", "from the trace writer"], ["Failure", "kind, checker or floret, time, step, reason"]],
@@ -774,7 +774,7 @@ type Failure struct {
                "reason": "write x=5 was acked, then lost after n1 crashed" }
 }` } },
 
-{ id: "replay", label: "Replay", sub: "same seed, same hash", g: "verdict", x: 2630, y: 690,
+{ id: "replay", label: "Replay", sub: "same seed, same hash", g: "verdict", x: 580, y: 1470,
   cp: "CP19", owner: "Rudra", status: "planned", adr: "ADR 0013 (proposed)", file: "cmd/diaspore/replay.go",
   what: "Reruns a saved failure from its .pappus and proves it happened the same way.",
   takes: [["file.pappus", "path"], ["--strict", "refuse if a floret program changed"]],
@@ -806,7 +806,7 @@ type Failure struct {
 `replay: same trace hash 3f9c…, same failure
 FAIL acked-writes at 83.120000s: write x=5 was acked, then lost after n1 crashed` } },
 
-{ id: "determinism", label: "check-determinism", sub: "run twice, compare", g: "verdict", x: 2630, y: 860,
+{ id: "determinism", label: "check-determinism", sub: "run twice, compare", g: "verdict", x: 170, y: 1470,
   cp: "CP12", owner: "Ash", status: "planned", adr: "design §12", file: "cmd/diaspore/determinism.go",
   what: "Catches florets (or Diaspore bugs) that break determinism, before they make replays lie.",
   takes: [["--seed", "one seed"], ["diaspore.yaml", "the setup"]],
@@ -832,7 +832,7 @@ fmt.Println("deterministic: same", len(a), "lines, same hash")` },
   run 2: {"step":41,"node":"n2",...,"reply":{"set_timers":[{"id":"e","after":287113}]}}` } },
 
 /* ───────────── Scale ───────────── */
-{ id: "dandelion", label: "Dandelion sweep", sub: "many seeds in parallel", g: "scale", x: 990, y: 860,
+{ id: "dandelion", label: "Dandelion sweep", sub: "many seeds in parallel", g: "scale", x: 170, y: 1700,
   cp: "CP19, CP20", owner: "Rudra", status: "planned", adr: "design §13", file: "internal/dandelion/",
   what: "Runs many seeds to hunt for one that fails. This is how Diaspore finds bugs, not just replays them.",
   takes: [["--seeds", "a range like 1-500"], ["--workers", "parallel runs, default the CPU count"]],
@@ -870,7 +870,7 @@ fmt.Println("deterministic: same", len(a), "lines, same hash")` },
 FAIL seed 137  acked-writes  → runs/run-137.pappus
 FAIL seed 412  acked-writes  → runs/run-412.pappus` } },
 
-{ id: "coordinator", label: "Coordinator", sub: "workers across machines", g: "scale", x: 1400, y: 860,
+{ id: "coordinator", label: "Coordinator", sub: "workers across machines", g: "scale", x: 580, y: 1700,
   cp: "CP24", owner: "Rudra", status: "planned", adr: "design §13, §17", file: "internal/dandelion/coord/",
   what: "Spreads a dandelion across machines. The part of Diaspore that is itself a distributed system.",
   takes: [["a seed range", "and a list of worker addresses"]],
@@ -911,10 +911,10 @@ const EDGES = [
   ["seed", "streams", "split by name", { main: 1 }],
   ["yaml", "workload", "workload:", { main: 1 }],
   ["yaml", "faults", "faults:", { main: 1 }],
-  ["yaml", "driver", "florets.command", { bend: -260 }],
+  ["yaml", "driver", "florets.command", {}],
   ["streams", "workload", "workload stream", { main: 1 }],
   ["streams", "network", "delay stream", { bend: 300 }],
-  ["streams", "driver", "rand_seed per floret", { bend: -150 }],
+  ["streams", "driver", "rand_seed per floret", {}],
   ["workload", "queue", "client requests", { main: 1 }],
   ["queue", "loop", "pop earliest", { main: 1 }],
   ["loop", "clock", "advanceTo(t)", { main: 1 }],
@@ -934,8 +934,8 @@ const EDGES = [
   ["crash", "queue", "crash / restart", {}],
   ["crash", "driver", "kill / respawn", {}],
   ["loop", "workload", "replies to clients", { bend: 120 }],
-  ["workload", "history", "records", { bend: -330 }],
-  ["lockstep", "failures", "break or hang", { main: 1, bend: -300 }],
+  ["workload", "history", "records", { bend: 160 }],
+  ["lockstep", "failures", "break or hang", { main: 1 }],
   ["failures", "pappus", "recorded", { main: 1 }],
   ["history", "checkers", "read at end", { main: 1 }],
   ["checkers", "pappus", "on failure", { main: 1 }],
@@ -943,7 +943,7 @@ const EDGES = [
   ["pappus", "replay", "input", { main: 1 }],
   ["replay", "trace", "compare hash", { dashed: 1 }],
   ["determinism", "trace", "run twice, diff", { dashed: 1 }],
-  ["dandelion", "seed", "seed range", { dashed: 1 }],
+  ["dandelion", "seed", "seed range", { dashed: 1, bend: 160 }],
   ["coordinator", "dandelion", "hands out ranges", { main: 1 }],
   ["dandelion", "pappus", "one per failing seed", { dashed: 1 }]
 ];
