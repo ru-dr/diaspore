@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Floret event, protocol v1",
+  "description": "One line Diaspore writes to a floret's stdin. See PROTOCOL.md section 4. Unknown fields are allowed, because florets must ignore them.",
+  "oneOf": [
+    { "$ref": "#/$defs/init" },
+    { "$ref": "#/$defs/message" },
+    { "$ref": "#/$defs/timer" }
+  ],
+  "$defs": {
+    "name": {
+      "description": "A node, client, or timer name.",
+      "type": "string",
+      "minLength": 1
+    },
+    "time": {
+      "description": "Virtual time in integer microseconds, kept below 2^53 so JavaScript reads it exactly.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+    },
+    "init": {
+      "description": "Starts a floret, or restarts it after a crash.",
+      "type": "object",
+      "required": ["type", "protocol", "node", "peers", "rand_seed", "time", "stored"],
+      "properties": {
+        "type": { "const": "init" },
+        "protocol": { "type": "integer", "minimum": 1 },
+        "node": { "$ref": "#/$defs/name" },
+        "peers": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/name" },
+          "uniqueItems": true
+        },
+        "rand_seed": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+        "time": { "$ref": "#/$defs/time" },
+        "stored": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "message": {
+      "description": "Delivers a message from another node or from a client.",
+      "type": "object",
+      "required": ["type", "time", "from", "body"],
+      "properties": {
+        "type": { "const": "message" },
+        "time": { "$ref": "#/$defs/time" },
+        "from": { "$ref": "#/$defs/name" },
+        "body": { "type": "object" }
+      }
+    },
+    "timer": {
+      "description": "Tells the floret that a timer it set has fired.",
+      "type": "object",
+      "required": ["type", "time", "id"],
+      "properties": {
+        "type": { "const": "timer" },
+        "time": { "$ref": "#/$defs/time" },
+        "id": { "$ref": "#/$defs/name" }
+      }
+    }
+  }
+}
